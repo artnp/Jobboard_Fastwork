@@ -51,22 +51,18 @@ class Notifier:
 
     def notify(self, title: str, message: str, job_url: str = None):
         """Send notifications to all configured channels."""
-        # 1. Desktop Notification
         if self.config.get("desktop_notification", True):
             self._send_desktop_notification(title, message)
 
-        # 2. Discord Webhook
         discord_url = self.config.get("discord_webhook_url")
         if discord_url:
             self._send_discord_webhook(discord_url, title, message, job_url)
 
-        # 3. Telegram Bot
         tg_token = self.config.get("telegram_bot_token")
         tg_chat_id = self.config.get("telegram_chat_id")
         if tg_token and tg_chat_id:
             self._send_telegram(tg_token, tg_chat_id, title, message, job_url)
 
-        # 4. LINE Notify
         line_token = self.config.get("line_notify_token")
         if line_token:
             self._send_line_notify(line_token, title, message, job_url)
@@ -199,7 +195,6 @@ def match_keywords(job, keywords, exclude_keywords):
     
     text_content = f"{title} {description} {tag_name}".lower()
 
-    # Check exclude keywords
     for ex_kw in exclude_keywords:
         if ex_kw.strip() and ex_kw.lower() in text_content:
             return False, []
@@ -212,7 +207,74 @@ def match_keywords(job, keywords, exclude_keywords):
 
     return len(matched) > 0, matched
 
-def submit_offer(job_id, config):
+def similarity_score(str1: str, str2: str) -> float:
+    """Calculate Bigram similarity score matching user's JS algorithm."""
+    stop_words = ["รับ", "จ้าง", "ทำ", "ตก", "แต่ง", "ตัด", "ต่อ", "แก้ไข", "รูปภาพ", "รูป", "ภาพ", "ให้", "ดู", "งาน", "ฉัน", "หา", "ฟรีแลนซ์", "คน", "มา"]
+    s1 = str1.lower()
+    s2 = str2.lower()
+    for word in stop_words:
+        s1 = s1.replace(word, "")
+        s2 = s2.replace(word, "")
+    s1 = "".join(s1.split())
+    s2 = "".join(s2.split())
+
+    if s1 == s2 and len(s1) > 0:
+        return 1.0
+    if not s1 or not s2:
+        return 0.0
+
+    bg1 = [s1[i:i+2] for i in range(len(s1) - 1)]
+    bg2 = [s2[i:i+2] for i in range(len(s2) - 1)]
+    if not bg1 or not bg2:
+        return 0.0
+
+    intersection = 0
+    bg2_copy = list(bg2)
+    for b1 in bg1:
+        if b1 in bg2_copy:
+            intersection += 1
+            bg2_copy.remove(b1)
+
+    return (2.0 * intersection) / (len(bg1) + len(bg2))
+
+def select_best_product(job, config):
+    """Select the best matching user product for a job based on context rules and similarity."""
+    user_products = config.get("user_products", [])
+    if not user_products:
+        return None
+
+    title = job.get("title", "") or ""
+    description = job.get("description", "") or ""
+    job_text = f"{title} {description}".lower()
+
+    best_product = None
+    best_score = -1.0
+
+    for prod in user_products:
+        score = 0.0
+        # Keyword bonus score (+15 points per match)
+        keywords = prod.get("keywords", [])
+        for kw in keywords:
+            if kw.lower() in job_text:
+                score += 15.0
+        
+        # Match title / alias bonus
+        match_title = prod.get("match", "").lower()
+        if match_title and match_title in job_text:
+            score += 20.0
+
+        # Similarity score
+        prod_title = prod.get("title", "")
+        sim = similarity_score(job_text, prod_title)
+        score += sim
+
+        if score > best_score:
+            best_score = score
+            best_product = prod
+
+    return best_product
+
+def submit_offer(job_id, job, config):
     token = config.get("access_token", "").strip()
     if not token:
         logger.warning(f"Cannot submit offer for job {job_id}: Missing access_token in config.json")
@@ -220,11 +282,21 @@ def submit_offer(job_id, config):
 
     url = f"https://jobboard-api.fastwork.co/api/jobs/{job_id}/offers"
     offer_cfg = config.get("auto_offer_config", {})
+    
+    # Auto-select best matching product based on job description & title
+    best_product = select_best_product(job, config)
+    product_id = best_product.get("product_id") if best_product else None
+    
     payload = {
-        "price": offer_cfg.get("price", 300),
+        "price": offer_cfg.get("price", 10),
         "deliver_in_days": offer_cfg.get("deliver_in_days", 1),
-        "message": offer_cfg.get("message", "สวัสดีครับ พร้อมรับงานและส่งมอบได้ตามต้องการครับ")
+        "message": offer_cfg.get("message", "สวัสดีครับ พร้อมรับงานและส่งมอบได้ตามต้องการครับ"),
+        "brief_url": config.get("default_brief_url", "https://fastwork.co/user/ready321")
     }
+    
+    if product_id:
+        payload["product_id"] = product_id
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -233,8 +305,9 @@ def submit_offer(job_id, config):
 
     try:
         res = requests.post(url, json=payload, headers=headers, timeout=10)
+        prod_name = best_product.get("title") if best_product else "ไม่ได้ระบุ"
         if res.status_code in [200, 201]:
-            logger.info(f"✅ Successfully posted offer for job ID: {job_id}")
+            logger.info(f"✅ Successfully posted offer for job ID: {job_id} | Selected Product: {prod_name}")
             return True
         else:
             logger.error(f"❌ Failed to post offer for job {job_id}. Status: {res.status_code}, Response: {res.text}")
@@ -278,24 +351,28 @@ def check_jobs_cycle(config, notifier, seen_jobs):
             logger.info(f"💰 งบประมาณ: ฿{budget}")
             logger.info(f"📝 รายละเอียด: {desc_snippet}")
             logger.info(f"🔗 ลิงก์: {job_url}")
+            
+            best_product = select_best_product(job, config)
+            if best_product:
+                logger.info(f"📦 แมตช์งานของคุณ: {best_product.get('title')}")
             logger.info("=" * 60)
 
-            # Notification
+            # 1. Auto offer mode (Submit API offer FIRST for maximum speed)
+            if mode == "auto_offer":
+                submit_offer(job_id, job, config)
+
+            # 2. Desktop Notification
             notify_title = f"🎯 เจองาน Fastwork ใหม่! [฿{budget}]"
             notify_msg = f"ชื่องาน: {title}\nคีย์เวิร์ด: {', '.join(matched_kws)}\nรายละเอียด: {desc_snippet}"
             notifier.notify(notify_title, notify_msg, job_url)
 
-            # Auto open browser (Chrome)
+            # 3. Auto open browser in Chrome AFTER offer is posted
             if config.get("auto_open_browser", True):
                 try:
                     logger.info(f"🌐 Opening job in Chrome: {job_url}")
                     subprocess.Popen(f'start chrome "{job_url}"', shell=True)
                 except Exception as e:
                     logger.error(f"Error opening browser: {e}")
-
-            # Auto offer mode
-            if mode == "auto_offer":
-                submit_offer(job_id, config)
 
     if new_matches_count > 0:
         save_seen_jobs(seen_jobs)
@@ -312,7 +389,7 @@ def background_loop(icon):
     seen_jobs = load_seen_jobs()
 
     while not stop_event.is_set():
-        config = load_config()  # reload in case user modified config.json
+        config = load_config()
         interval = config.get("check_interval_seconds", 300)
         
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -324,7 +401,6 @@ def background_loop(icon):
         except Exception as e:
             logger.error(f"Error in check cycle: {e}")
 
-        # Wait for interval or manual trigger or stop signal
         manual_trigger_event.clear()
         wait_seconds = 0
         while wait_seconds < interval and not stop_event.is_set():
@@ -362,7 +438,6 @@ def get_status_text(item):
 def main():
     icon_image = create_f_icon()
 
-    # System Tray Menu
     menu = pystray.Menu(
         item(get_status_text, None, enabled=False),
         pystray.Menu.SEPARATOR,
@@ -376,12 +451,10 @@ def main():
 
     icon = pystray.Icon("FastworkBot", icon_image, "Fastwork Job Monitor", menu)
 
-    # Start background polling thread
     worker_thread = threading.Thread(target=background_loop, args=(icon,), daemon=True)
     worker_thread.start()
 
     logger.info("System Tray Icon started with 'F' logo.")
-    # Run Tray Icon (Blocks until exit)
     icon.run()
 
 if __name__ == "__main__":

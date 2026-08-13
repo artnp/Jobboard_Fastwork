@@ -1,0 +1,39 @@
+{
+  "keywords": [
+    "แก้ไขข้อความ",
+    "แก้ไขภาพ",
+    "แก้ไขรูป",
+    "ตัดต่อรูป",
+    "ตัดต่อภาพ",
+    "แก้ไขเอกสาร",
+    "ตัดต่อเอกสาร",
+    "photoshop",
+    "โฟโต้ชอป",
+    "retouch",
+    "รีทัช",
+    "แก้ไขตัวหนังสือ",
+    "ตัดต่อตัวหนังสือ",
+    "ตัดต่อข้อความ",
+    "หาฟอนต์",
+    "หา font",
+    "แก้ไขฟอนต์",
+    "แก้ไข font",
+    "ตัดต่อฟอนต์",
+    "ตัดต่อ font",
+    "แปลงข้อความ",
+    "แปลงภาพ",
+    "แปลงรูป",
+    "ตัดต่อหน้า"
+  ],
+  "exclude_keywords": [],
+  "check_interval_seconds": 300,
+  "mode": "auto_offer",
+  "desktop_notification": true,
+  "auto_open_browser": true,
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMmUxNzc4N2EtNDhmYS00ZDUyLTljNzctM2U1ZjQ0N2VkNjdkIiwicm9sZSI6IiIsImlzcyI6ImZhc3R3b3JrIiwic3ViIjoiMmUxNzc4N2EtNDhmYS00ZDUyLTljNzctM2U1ZjQ0N2VkNjdkIiwiZXhwIjoxODE1NDk5Mjc4fQ.ZRBKU2hkdYhC3cGbnnnXotWg-r6aSOxr0jv2YjEVE9s",
+  "auto_offer_config": {
+    "price": 10,
+    "deliver_in_days": 1,
+    "message": "สวัสดีครับ สนใจรับงานแก้ไขภาพ/เอกสาร/รีทัชครับ งานไว ละเอียด พร้อมเริ่มงานทันทีครับ"
+  }
+}

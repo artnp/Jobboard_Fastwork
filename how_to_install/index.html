@@ -495,6 +495,45 @@
             </button>
         </div>
 
+        <!-- ================= STEP 0: UNZIP ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num" style="background: #FEF3C7; color: #D97706; border-color: #FDE68A;">0</div>
+                <div>
+                    <h2 class="step-title">ขั้นตอนเริ่มต้น: แตกไฟล์ ZIP โปรแกรม (Unzip)</h2>
+                    <p class="step-subtitle">นำไฟล์โปรแกรมออกจากไฟล์บีบอัด .zip ก่อนเริ่มต้นใช้งาน</p>
+                </div>
+            </div>
+
+            <!-- Windows Unzip -->
+            <div class="os-content-win">
+                <div class="sub-step">
+                    <div class="sub-step-title">🗜️ วิธีแตกไฟล์บน Windows:</div>
+                    <p>1. ไปที่ไฟล์ที่ดาวน์โหลดมา เช่น <strong>Jobboard_Fastwork-main.zip</strong> หรือ <strong>Jobboard_Fastwork.zip</strong></p>
+                    <p>2. <strong>คลิกขวาที่ไฟล์ .zip</strong> ➔ เลือกเมนู <strong>"Extract All..." (แตกไฟล์ทั้งหมด...)</strong></p>
+                    <p>3. จะมีหน้าต่างขึ้นมา ให้กดปุ่ม <strong>Extract</strong></p>
+                    <p>4. คุณจะได้โฟลเดอร์สีเหลืองปกติชื่อ <code>Jobboard_Fastwork</code> ให้ <strong>ดับเบิลคลิกเข้าไปในโฟลเดอร์นี้</strong> เพื่อเริ่มทำขั้นตอนถัดไป</p>
+                </div>
+
+                <div class="callout callout-warning">
+                    <span style="font-size: 1.5rem;">⚠️</span>
+                    <div>
+                        <strong>ข้อควรระวัง:</strong> ห้ามดับเบิลคลิกรันไฟล์ขณะที่ยังอยู่ในไฟล์ <code>.zip</code> โดยเด็ดขาด เพราะ Windows จะมองเป็นไฟล์อ่านอย่างเดียวและไม่สามารถบันทึกการตั้งค่าได้ ต้องแตกไฟล์ (Extract) ออกมาเป็นโฟลเดอร์ปกติก่อนเสมอนะครับ
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mac Unzip -->
+            <div class="os-content-mac" style="display: none;">
+                <div class="sub-step">
+                    <div class="sub-step-title">🍏 วิธีแตกไฟล์บน macOS:</div>
+                    <p>1. ดับเบิลคลิกที่ไฟล์ <strong>Jobboard_Fastwork.zip</strong></p>
+                    <p>2. ระบบ Mac จะแตกไฟล์ออกมาเป็นโฟลเดอร์ปกติให้เองอัตโนมัติทันที</p>
+                    <p>3. ดับเบิลคลิกเข้าไปในโฟลเดอร์เพื่อเริ่มทำขั้นตอนถัดไป</p>
+                </div>
+            </div>
+        </div>
+
         <!-- ================= STEP 1: INSTALL PYTHON ================= -->
         <div class="step-card">
             <div class="step-header">

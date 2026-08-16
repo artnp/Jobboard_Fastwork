@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "release_date": "2026-08-16",
+  "changelog": "เวอร์ชัน 1.0.0: ระบบบอท Fastwork Auto-Offer พร้อมหน้าต่างตั้งค่า GUI, ระบบดึง Token และสินค้าอัตโนมัติ, ระบบอัปโหลดผลงานตัวอย่าง PDF/รูปภาพ",
+  "update_files": [
+    "fastwork_bot.py",
+    "settings_gui.py",
+    "cookie_extractor.py",
+    "updater.py"
+  ]
+}

@@ -582,6 +582,11 @@ def on_open_config(icon, item):
     if os.path.exists(CONFIG_FILE):
         open_path(os.path.abspath(CONFIG_FILE))
 
+def on_open_guide(icon, item):
+    guide_path = os.path.abspath(os.path.join("how_to_install", "index.html"))
+    if os.path.exists(guide_path):
+        open_path(guide_path)
+
 def on_open_folder(icon, item):
     if getattr(sys, 'frozen', False):
         open_path(os.path.dirname(sys.executable))
@@ -603,6 +608,7 @@ def main():
         pystray.Menu.SEPARATOR,
         item("🔍 ตรวจหางานทันที (Check Now)", on_check_now),
         item("⚙️ หน้าต่างตั้งค่าบอท (Settings UI)", on_open_settings_gui),
+        item("📖 คู่มือการติดตั้ง & ใช้งาน (Guide)", on_open_guide),
         item("🔄 ตรวจสอบอัปเดต (Check Update)", on_check_update),
         item("📎 เปิดโฟลเดอร์ผลงาน PDF (Portfolio)", on_open_portfolio),
         item("📁 เปิดโฟลเดอร์โปรแกรม", on_open_folder),

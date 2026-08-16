@@ -52,22 +52,37 @@ def save_config_data(data):
 
 def get_startup_shortcut_path():
     startup_dir = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup")
-    return os.path.join(startup_dir, "FastworkBot.vbs")
+    return os.path.join(startup_dir, "FastworkBot.lnk")
 
 def is_start_on_boot_enabled():
-    return os.path.exists(get_startup_shortcut_path())
+    shortcut_path = get_startup_shortcut_path()
+    old_vbs = os.path.join(os.path.dirname(shortcut_path), "FastworkBot.vbs")
+    return os.path.exists(shortcut_path) or os.path.exists(old_vbs)
 
 def set_start_on_boot(enable: bool):
     shortcut_path = get_startup_shortcut_path()
+    old_vbs = os.path.join(os.path.dirname(shortcut_path), "FastworkBot.vbs")
+    if os.path.exists(old_vbs):
+        try: os.remove(old_vbs)
+        except Exception: pass
+
     if enable:
         current_dir = os.path.abspath(os.getcwd())
-        vbs_content = f'''Set WshShell = CreateObject("WScript.Shell")
-WshShell.CurrentDirectory = "{current_dir}"
-WshShell.Run "pythonw fastwork_bot.py", 0, False
-'''
+        target_vbs = os.path.join(current_dir, "start_bot.vbs")
+        icon_path = os.path.join(current_dir, "icon.ico")
+
+        ps_cmd = f'''$ws = New-Object -ComObject WScript.Shell
+$s = $ws.CreateShortcut("{shortcut_path}")
+$s.TargetPath = "wscript.exe"
+$s.Arguments = '"{target_vbs}"'
+$s.WorkingDirectory = "{current_dir}"
+$s.Description = "Fastwork Auto-Offer Bot"
+if (Test-Path "{icon_path}") {{
+    $s.IconLocation = "{icon_path},0"
+}}
+$s.Save()'''
         try:
-            with open(shortcut_path, "w", encoding="utf-8") as f:
-                f.write(vbs_content)
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], capture_output=True)
         except Exception as e:
             print("Error creating startup shortcut:", e)
     else:

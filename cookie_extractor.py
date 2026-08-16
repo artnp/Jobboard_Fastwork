@@ -9,14 +9,21 @@ import ctypes
 from ctypes import wintypes
 import psutil
 
-# Windows DPAPI structures for CryptUnprotectData
-class DATA_BLOB(ctypes.Structure):
-    _fields_ = [
-        ('cbData', wintypes.DWORD),
-        ('pbData', ctypes.POINTER(ctypes.c_byte))
-    ]
+# Windows DPAPI structures for CryptUnprotectData (Windows only)
+if sys.platform == "win32":
+    try:
+        from ctypes import wintypes
+        class DATA_BLOB(ctypes.Structure):
+            _fields_ = [
+                ('cbData', wintypes.DWORD),
+                ('pbData', ctypes.POINTER(ctypes.c_byte))
+            ]
+    except Exception:
+        pass
 
 def decrypt_dpapi(encrypted_bytes):
+    if sys.platform != "win32":
+        return None
     try:
         blob_in = DATA_BLOB(len(encrypted_bytes), ctypes.cast(ctypes.create_string_buffer(encrypted_bytes), ctypes.POINTER(ctypes.c_byte)))
         blob_out = DATA_BLOB()
@@ -258,7 +265,12 @@ def get_fastwork_token_from_browsers(auto_close_browser=False):
 
 def launch_interactive_fastwork_login():
     """Opens a visible browser window for the user to log in and intercepts the accessToken."""
-    session_dir = os.path.join(os.environ.get("LOCALAPPDATA", "."), "FastworkBotSession")
+    if sys.platform == "win32":
+        session_dir = os.path.join(os.environ.get("LOCALAPPDATA", "."), "FastworkBotSession")
+    elif sys.platform == "darwin":
+        session_dir = os.path.expanduser("~/Library/Application Support/FastworkBotSession")
+    else:
+        session_dir = os.path.expanduser("~/.fastwork_bot_session")
     
     # Method 1: Playwright with persistent context
     try:

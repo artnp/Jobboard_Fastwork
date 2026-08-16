@@ -549,17 +549,17 @@ def background_loop(icon):
 def on_check_now(icon, item):
     manual_trigger_event.set()
 
-def on_check_update(icon, item):
-    try:
-        subprocess.Popen([sys.executable, "settings_gui.py"])
-    except Exception as e:
-        logger.error(f"Error opening settings GUI for update: {e}")
-
 def on_open_settings_gui(icon, item):
     try:
-        subprocess.Popen([sys.executable, "settings_gui.py"])
+        if getattr(sys, 'frozen', False):
+            subprocess.Popen([sys.executable, "--settings"])
+        else:
+            subprocess.Popen([sys.executable, "settings_gui.py"])
     except Exception as e:
         logger.error(f"Error opening settings GUI: {e}")
+
+def on_check_update(icon, item):
+    on_open_settings_gui(icon, item)
 
 def on_open_portfolio(icon, item):
     if not os.path.exists(PORTFOLIO_DIR):
@@ -571,7 +571,10 @@ def on_open_config(icon, item):
         os.startfile(CONFIG_FILE)
 
 def on_open_folder(icon, item):
-    os.startfile(os.getcwd())
+    if getattr(sys, 'frozen', False):
+        os.startfile(os.path.dirname(sys.executable))
+    else:
+        os.startfile(os.getcwd())
 
 def on_exit(icon, item):
     stop_event.set()
@@ -604,4 +607,17 @@ def main():
     icon.run()
 
 if __name__ == "__main__":
-    main()
+    if "--settings" in sys.argv:
+        import settings_gui
+        settings_gui.main()
+    else:
+        # If user opened the main bot without --hidden, also pop up the settings GUI
+        if "--hidden" not in sys.argv and "-h" not in sys.argv:
+            try:
+                if getattr(sys, 'frozen', False):
+                    subprocess.Popen([sys.executable, "--settings"])
+                else:
+                    subprocess.Popen([sys.executable, "settings_gui.py"])
+            except Exception:
+                pass
+        main()

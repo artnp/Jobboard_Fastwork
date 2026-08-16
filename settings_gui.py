@@ -17,6 +17,18 @@ CONFIG_FILE = "config.json"
 PORTFOLIO_DIR = "portfolio"
 ICON_FILE = "icon.ico"
 
+def open_path(target_path):
+    """Opens a file or directory in the default system file explorer / viewer cross-platform."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(target_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", target_path])
+        else:
+            subprocess.Popen(["xdg-open", target_path])
+    except Exception as e:
+        print(f"Error opening path {target_path}: {e}")
+
 def load_config_data():
     if not os.path.exists(CONFIG_FILE):
         return {
@@ -522,7 +534,7 @@ class SettingsApp(tk.Tk):
 
     def open_portfolio_folder(self):
         self.ensure_portfolio_dir()
-        os.startfile(os.path.abspath(PORTFOLIO_DIR))
+        open_path(os.path.abspath(PORTFOLIO_DIR))
 
     def add_portfolio_file(self):
         self.ensure_portfolio_dir()

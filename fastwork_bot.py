@@ -629,13 +629,4 @@ if __name__ == "__main__":
         import settings_gui
         settings_gui.main()
     else:
-        # If user opened the main bot without --hidden, also pop up the settings GUI
-        if "--hidden" not in sys.argv and "-h" not in sys.argv:
-            try:
-                if getattr(sys, 'frozen', False):
-                    subprocess.Popen([sys.executable, "--settings"])
-                else:
-                    subprocess.Popen([sys.executable, "settings_gui.py"])
-            except Exception:
-                pass
         main()

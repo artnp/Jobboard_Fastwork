@@ -5,9 +5,6 @@ import json
 import logging
 import threading
 import subprocess
-import webbrowser
-import urllib.request
-import urllib.parse
 import requests
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
@@ -29,14 +26,14 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("bot.log", encoding="utf-8")
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger("FastworkBot")
 
 CONFIG_FILE = "config.json"
 SEEN_JOBS_FILE = "seen_jobs.json"
+PORTFOLIO_DIR = "portfolio"
 API_URL = "https://jobboard-api.fastwork.co/api/jobs"
 ICON_FILE = "icon.png"
 
@@ -49,23 +46,10 @@ class Notifier:
     def __init__(self, config: dict):
         self.config = config
 
-    def notify(self, title: str, message: str, job_url: str = None):
-        """Send notifications to all configured channels."""
-        if self.config.get("desktop_notification", True):
+    def notify(self, title: str, message: str, skip_desktop: bool = False):
+        """Send desktop notification if enabled and not skipped."""
+        if not skip_desktop and self.config.get("desktop_notification", True):
             self._send_desktop_notification(title, message)
-
-        discord_url = self.config.get("discord_webhook_url")
-        if discord_url:
-            self._send_discord_webhook(discord_url, title, message, job_url)
-
-        tg_token = self.config.get("telegram_bot_token")
-        tg_chat_id = self.config.get("telegram_chat_id")
-        if tg_token and tg_chat_id:
-            self._send_telegram(tg_token, tg_chat_id, title, message, job_url)
-
-        line_token = self.config.get("line_notify_token")
-        if line_token:
-            self._send_line_notify(line_token, title, message, job_url)
 
     def _send_desktop_notification(self, title: str, message: str):
         try:
@@ -82,57 +66,6 @@ class Notifier:
                 logger.warning("plyer module not found for desktop notification.")
         except Exception as e:
             logger.error(f"Desktop notification error: {e}")
-
-    def _send_discord_webhook(self, url: str, title: str, message: str, job_url: str):
-        try:
-            payload = {
-                "embeds": [{
-                    "title": f"🚨 {title}",
-                    "description": message,
-                    "url": job_url if job_url else "https://jobboard.fastwork.co/jobs",
-                    "color": 3447003
-                }]
-            }
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"})
-            urllib.request.urlopen(req, timeout=5)
-            logger.info("Sent Discord notification")
-        except Exception as e:
-            logger.error(f"Discord webhook error: {e}")
-
-    def _send_telegram(self, token: str, chat_id: str, title: str, message: str, job_url: str):
-        try:
-            text = f"<b>{title}</b>\n\n{message}"
-            if job_url:
-                text += f"\n\n🔗 <a href='{job_url}'>ดูรายละเอียดงานบน Fastwork</a>"
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": text,
-                "parse_mode": "HTML"
-            }
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-            urllib.request.urlopen(req, timeout=5)
-            logger.info("Sent Telegram notification")
-        except Exception as e:
-            logger.error(f"Telegram notification error: {e}")
-
-    def _send_line_notify(self, token: str, title: str, message: str, job_url: str):
-        try:
-            full_msg = f"\n{title}\n{message}"
-            if job_url:
-                full_msg += f"\n{job_url}"
-            url = "https://notify-api.line.me/api/notify"
-            payload = urllib.parse.urlencode({"message": full_msg}).encode('utf-8')
-            req = urllib.request.Request(url, data=payload, headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            })
-            urllib.request.urlopen(req, timeout=5)
-            logger.info("Sent LINE Notify notification")
-        except Exception as e:
-            logger.error(f"LINE Notify error: {e}")
 
 def create_f_icon():
     """Generates the 'F' logo icon for system tray if missing."""
@@ -161,6 +94,13 @@ def load_config():
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
+def save_config(config_data):
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving config: {e}")
+
 def load_seen_jobs():
     if os.path.exists(SEEN_JOBS_FILE):
         try:
@@ -173,6 +113,46 @@ def load_seen_jobs():
 def save_seen_jobs(seen_jobs):
     with open(SEEN_JOBS_FILE, "w", encoding="utf-8") as f:
         json.dump(list(seen_jobs), f, ensure_ascii=False, indent=2)
+
+def auto_sync_user_products_if_needed(config):
+    """Automatically fetch and update user products from Fastwork API if user_products is empty or token missing."""
+    import cookie_extractor
+    token = config.get("access_token", "").strip()
+    if not token:
+        logger.info("🔍 ไม่พบ Access Token ใน config กำลังสแกนหาคุกกี้จากเบราว์เซอร์อัตโนมัติ...")
+        ok, tok, msg = cookie_extractor.get_fastwork_token_from_browsers()
+        if ok and tok:
+            token = tok
+            config["access_token"] = token
+            save_config(config)
+            logger.info(f"✅ {msg}")
+
+    user_products = config.get("user_products", [])
+    if not token or user_products:
+        return
+
+    logger.info("🔄 กำลังดึงรายการสินค้าจาก Fastwork อัตโนมัติ...")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    try:
+        r = requests.get("https://api.fastwork.co/api/v4/user/products", headers=headers, timeout=10)
+        if r.status_code == 200:
+            raw_products = r.json()
+            products = []
+            for p in raw_products:
+                products.append({
+                    "product_id": p.get("id"),
+                    "title": p.get("title", ""),
+                    "slug": p.get("slug", ""),
+                    "tags": p.get("tags", [])
+                })
+            config["user_products"] = products
+            save_config(config)
+            logger.info(f"✅ ซิงค์สินค้าอัตโนมัติสำเร็จ! พบทั้งหมด {len(products)} รายการ")
+    except Exception as e:
+        logger.warning(f"ไม่สามารถซิงค์สินค้าอัตโนมัติ: {e}")
 
 def fetch_jobs():
     headers = {
@@ -208,7 +188,7 @@ def match_keywords(job, keywords, exclude_keywords):
     return len(matched) > 0, matched
 
 def similarity_score(str1: str, str2: str) -> float:
-    """Calculate Bigram similarity score matching user's JS algorithm."""
+    """Calculate Bigram similarity score matching Thai text patterns."""
     stop_words = ["รับ", "จ้าง", "ทำ", "ตก", "แต่ง", "ตัด", "ต่อ", "แก้ไข", "รูปภาพ", "รูป", "ภาพ", "ให้", "ดู", "งาน", "ฉัน", "หา", "ฟรีแลนซ์", "คน", "มา"]
     s1 = str1.lower()
     s2 = str2.lower()
@@ -238,47 +218,165 @@ def similarity_score(str1: str, str2: str) -> float:
     return (2.0 * intersection) / (len(bg1) + len(bg2))
 
 def select_best_product(job, config):
-    """Select the best matching user product for a job based on context rules and similarity."""
+    """Select the best matching user product for a job based on title, keywords, tags, and text similarity."""
     user_products = config.get("user_products", [])
     if not user_products:
         return None
 
     title = job.get("title", "") or ""
     description = job.get("description", "") or ""
-    job_text = f"{title} {description}".lower()
+    tag_name = (job.get("tag", {}) or {}).get("name", "") or ""
+    job_text = f"{title} {description} {tag_name}".lower()
 
     best_product = None
     best_score = -1.0
 
     for prod in user_products:
         score = 0.0
-        # Keyword bonus score (+15 points per match)
-        keywords = prod.get("keywords", [])
-        for kw in keywords:
-            if kw.lower() in job_text:
+        
+        # 1. Check extra keywords / tags
+        tags = prod.get("tags", []) + prod.get("keywords", [])
+        for tag in tags:
+            if tag and tag.lower() in job_text:
                 score += 15.0
         
-        # Match title / alias bonus
+        # 2. Check match alias if defined
         match_title = prod.get("match", "").lower()
         if match_title and match_title in job_text:
             score += 20.0
 
-        # Similarity score
+        # 3. Product title words matching
         prod_title = prod.get("title", "")
+        clean_symbols = ["|", "✅", "❌", "⚠️", "🔥", "📌", "✨", "[", "]", "(", ")", "/", "*", "#", "📖", "👆"]
+        title_for_words = prod_title
+        for sym in clean_symbols:
+            title_for_words = title_for_words.replace(sym, " ")
+        words = [w.strip() for w in title_for_words.split() if len(w.strip()) >= 2]
+        for w in words:
+            if w.lower() in job_text:
+                score += 10.0
+
+        # 4. Bigram similarity score
         sim = similarity_score(job_text, prod_title)
-        score += sim
+        score += sim * 10.0
 
         if score > best_score:
             best_score = score
             best_product = prod
 
+    # Fallback to the first product if no specific score achieved
+    if (not best_product or best_score <= 0) and user_products:
+        best_product = user_products[0]
+
     return best_product
+
+def ensure_offer_quota(token: str):
+    """Checks offer quota on Fastwork and automatically deletes the oldest open offer if full (10/10)."""
+    if not token:
+        return
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    try:
+        r_me = requests.get("https://jobboard-api.fastwork.co/api/me", headers=headers, timeout=10)
+        if r_me.status_code == 200:
+            quota_data = r_me.json().get("freelance_offers_quota", {})
+            current_count = quota_data.get("current_freelance_offers_count", 0)
+            max_count = quota_data.get("max_freelance_offers_count", 10)
+            reached_quota = quota_data.get("reached_quota", False)
+
+            if reached_quota or current_count >= max_count:
+                logger.warning(f"⚠️ โควต้านำเสนองานเต็ม ({current_count}/{max_count}) กำลังค้นหาข้อเสนอเก่าสุดเพื่อลบ...")
+                r_offers = requests.get(
+                    "https://jobboard-api.fastwork.co/api/me/job-freelance-offers",
+                    headers=headers,
+                    params={"page": 1, "page_size": 20},
+                    timeout=10
+                )
+                if r_offers.status_code == 200:
+                    offers = r_offers.json().get("data", [])
+                    open_offers = [o for o in offers if (o.get("job") or {}).get("status") == "open"]
+                    open_offers.sort(key=lambda x: x.get("inserted_at", ""))
+
+                    if open_offers:
+                        oldest = open_offers[0]
+                        oldest_id = oldest.get("id")
+                        job_title = (oldest.get("job") or {}).get("title", "ไม่ระบุ")
+                        del_url = f"https://jobboard-api.fastwork.co/api/job-freelance-offers/{oldest_id}"
+                        r_del = requests.delete(del_url, headers=headers, timeout=10)
+                        if r_del.status_code in [200, 204]:
+                            logger.info(f"🗑️ ลบข้อเสนอเก่าสุดสำเร็จ: \"{job_title}\" (ID: {oldest_id}) เพื่อเปิดทางให้งานใหม่")
+                        else:
+                            logger.error(f"❌ ลบข้อเสนอเก่าไม่สำเร็จ Status: {r_del.status_code}, Response: {r_del.text}")
+                    else:
+                        logger.warning("ไม่พบข้อเสนอที่สถานะเปิดรับอยู่เพื่อทำการลบ")
+    except Exception as e:
+        logger.error(f"Error checking/freeing quota: {e}")
+
+def upload_portfolio_files(token: str, job_id: str):
+    """Uploads PDF and image portfolio files located in the portfolio/ folder to Fastwork Storage for brief_files."""
+    if not os.path.exists(PORTFOLIO_DIR):
+        return []
+
+    valid_exts = ('.pdf', '.jpg', '.jpeg', '.png', '.webp')
+    files = [f for f in os.listdir(PORTFOLIO_DIR) if f.lower().endswith(valid_exts)]
+    if not files:
+        return []
+
+    # Limit to max 10 files (Fastwork maximum)
+    files = files[:10]
+    brief_files = []
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    for fname in files:
+        fpath = os.path.join(PORTFOLIO_DIR, fname)
+        try:
+            # Check file size (max 25MB)
+            if os.path.getsize(fpath) > 25 * 1024 * 1024:
+                logger.warning(f"⚠️ ไฟล์ {fname} มีขนาดเกิน 25MB ข้ามการอัปโหลด")
+                continue
+
+            with open(fpath, "rb") as f:
+                file_bytes = f.read()
+
+            upload_url = f"https://api.fastwork.co/upload/v2/jobboard/brief?file_name={fname}&job_id={job_id}"
+            res = requests.post(upload_url, data=file_bytes, headers=headers, timeout=25)
+            if res.status_code in [200, 201]:
+                res_data = res.json().get("data", {})
+                uploaded_id = res_data.get("id")
+                uploaded_url = res_data.get("url")
+                if uploaded_id and uploaded_url:
+                    is_img = fname.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))
+                    brief_files.append({
+                        "id": uploaded_id,
+                        "name": fname,
+                        "type": "image" if is_img else "file",
+                        "url": uploaded_url
+                    })
+                    logger.info(f"📎 อัปโหลดไฟล์ผลงานสำเร็จ: {fname}")
+            else:
+                logger.warning(f"⚠️ อัปโหลดไฟล์ {fname} ไม่สำเร็จ Status: {res.status_code}, Response: {res.text}")
+        except Exception as e:
+            logger.error(f"Error uploading file {fname}: {e}")
+
+    return brief_files
 
 def submit_offer(job_id, job, config):
     token = config.get("access_token", "").strip()
     if not token:
         logger.warning(f"Cannot submit offer for job {job_id}: Missing access_token in config.json")
         return False
+
+    # 1. Ensure quota is available before posting (delete oldest open offer if full)
+    ensure_offer_quota(token)
+
+    # 2. Upload any portfolio attachment files (PDF/Images)
+    brief_files = upload_portfolio_files(token, job_id)
 
     url = f"https://jobboard-api.fastwork.co/api/jobs/{job_id}/offers"
     offer_cfg = config.get("auto_offer_config", {})
@@ -287,27 +385,59 @@ def submit_offer(job_id, job, config):
     best_product = select_best_product(job, config)
     product_id = best_product.get("product_id") if best_product else None
     
-    payload = {
-        "price": offer_cfg.get("price", 10),
-        "deliver_in_days": offer_cfg.get("deliver_in_days", 1),
-        "message": offer_cfg.get("message", "สวัสดีครับ พร้อมรับงานและส่งมอบได้ตามต้องการครับ"),
-        "brief_url": config.get("default_brief_url", "https://fastwork.co/user/ready321")
+    # Determine budget (use job budget or configured price/budget, min 1)
+    raw_budget = job.get("budget") or job.get("budget_2")
+    try:
+        budget_val = int(raw_budget) if raw_budget else int(offer_cfg.get("budget", offer_cfg.get("price", 100)))
+    except (ValueError, TypeError):
+        budget_val = int(offer_cfg.get("budget", offer_cfg.get("price", 100)))
+    if budget_val < 1:
+        budget_val = 100
+
+    working_days = offer_cfg.get("working_days", offer_cfg.get("deliver_in_days", 1))
+    try:
+        working_days = max(1, int(working_days))
+    except (ValueError, TypeError):
+        working_days = 1
+
+    message = offer_cfg.get("description", offer_cfg.get("message", "สวัสดีครับ ยินดีให้บริการครับ พร้อมรับงานและส่งมอบได้ตามต้องการอย่างรวดเร็วและมีคุณภาพครับ"))
+    # Fastwork requires description minimum 100 characters
+    if len(message) < 100:
+        padding = " สวัสดีครับ ยินดีให้บริการและพร้อมเริ่มงานทันทีครับ สามารถสอบถามรายละเอียดและแก้ไขงานได้ตลอดเวลาครับ"
+        while len(message) < 100:
+            message += padding
+        message = message.strip()
+
+    brief_url = config.get("default_brief_url", "https://fastwork.co")
+
+    offer_data = {
+        "description": message,
+        "budget": budget_val,
+        "working_days": working_days,
+        "brief_url": brief_url,
+        "brief_files": brief_files
     }
     
     if product_id:
-        payload["product_id"] = product_id
+        offer_data["product_id"] = product_id
+
+    payload = {
+        "job_freelance_offer": offer_data
+    }
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": "https://jobboard.fastwork.co",
+        "Referer": f"https://jobboard.fastwork.co/jobs/{job_id}"
     }
 
     try:
-        res = requests.post(url, json=payload, headers=headers, timeout=10)
+        res = requests.post(url, json=payload, headers=headers, timeout=15)
         prod_name = best_product.get("title") if best_product else "ไม่ได้ระบุ"
         if res.status_code in [200, 201]:
-            logger.info(f"✅ Successfully posted offer for job ID: {job_id} | Selected Product: {prod_name}")
+            logger.info(f"✅ ยื่นข้อเสนอสำเร็จ! Job ID: {job_id} | สินค้า: {prod_name} | งบ: ฿{budget_val} | แนบผลงาน: {len(brief_files)} ไฟล์")
             return True
         else:
             logger.error(f"❌ Failed to post offer for job {job_id}. Status: {res.status_code}, Response: {res.text}")
@@ -358,13 +488,14 @@ def check_jobs_cycle(config, notifier, seen_jobs):
             logger.info("=" * 60)
 
             # 1. Auto offer mode (Submit API offer FIRST for maximum speed)
+            posted = False
             if mode == "auto_offer":
-                submit_offer(job_id, job, config)
+                posted = submit_offer(job_id, job, config)
 
             # 2. Desktop Notification
             notify_title = f"🎯 เจองาน Fastwork ใหม่! [฿{budget}]"
             notify_msg = f"ชื่องาน: {title}\nคีย์เวิร์ด: {', '.join(matched_kws)}\nรายละเอียด: {desc_snippet}"
-            notifier.notify(notify_title, notify_msg, job_url)
+            notifier.notify(notify_title, notify_msg, skip_desktop=(mode == "auto_offer"))
 
             # 3. Auto open browser in Chrome AFTER offer is posted
             if config.get("auto_open_browser", True):
@@ -385,6 +516,7 @@ def background_loop(icon):
     """Worker thread for background job checking."""
     logger.info("Background monitoring thread started.")
     config = load_config()
+    auto_sync_user_products_if_needed(config)
     notifier = Notifier(config)
     seen_jobs = load_seen_jobs()
 
@@ -417,16 +549,29 @@ def background_loop(icon):
 def on_check_now(icon, item):
     manual_trigger_event.set()
 
+def on_check_update(icon, item):
+    try:
+        subprocess.Popen([sys.executable, "settings_gui.py"])
+    except Exception as e:
+        logger.error(f"Error opening settings GUI for update: {e}")
+
+def on_open_settings_gui(icon, item):
+    try:
+        subprocess.Popen([sys.executable, "settings_gui.py"])
+    except Exception as e:
+        logger.error(f"Error opening settings GUI: {e}")
+
+def on_open_portfolio(icon, item):
+    if not os.path.exists(PORTFOLIO_DIR):
+        os.makedirs(PORTFOLIO_DIR, exist_ok=True)
+    os.startfile(os.path.abspath(PORTFOLIO_DIR))
+
 def on_open_config(icon, item):
     if os.path.exists(CONFIG_FILE):
         os.startfile(CONFIG_FILE)
 
 def on_open_folder(icon, item):
     os.startfile(os.getcwd())
-
-def on_open_log(icon, item):
-    if os.path.exists("bot.log"):
-        os.startfile("bot.log")
 
 def on_exit(icon, item):
     stop_event.set()
@@ -442,8 +587,9 @@ def main():
         item(get_status_text, None, enabled=False),
         pystray.Menu.SEPARATOR,
         item("🔍 ตรวจหางานทันที (Check Now)", on_check_now),
-        item("⚙️ แก้ไขไฟล์ตั้งค่า (config.json)", on_open_config),
-        item("📄 ดูประวัติ Log (bot.log)", on_open_log),
+        item("⚙️ หน้าต่างตั้งค่าบอท (Settings UI)", on_open_settings_gui),
+        item("🔄 ตรวจสอบอัปเดต (Check Update)", on_check_update),
+        item("📎 เปิดโฟลเดอร์ผลงาน PDF (Portfolio)", on_open_portfolio),
         item("📁 เปิดโฟลเดอร์โปรแกรม", on_open_folder),
         pystray.Menu.SEPARATOR,
         item("❌ ปิดโปรแกรม (Exit)", on_exit)

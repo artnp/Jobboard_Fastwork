@@ -5,6 +5,7 @@ import base64
 import shutil
 import threading
 import requests
+import subprocess
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog

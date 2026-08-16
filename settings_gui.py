@@ -236,13 +236,16 @@ class SettingsApp(tk.Tk):
         subtitle_label = tk.Label(header_frame, text="ระบบจัดการและตั้งค่าบอทอัจฉริยะ", font=("Segoe UI", 9), bg=self.primary_color, fg="#E0E7FF")
         subtitle_label.pack(side="left", padx=5, pady=16)
 
-        # Version & Update button on right side of header
+        # Version, Guide & Update button on right side of header
         local_ver = updater.get_local_version_info().get("version", "1.0.0")
         ver_frame = tk.Frame(header_frame, bg=self.primary_color)
         ver_frame.pack(side="right", padx=15, pady=12)
 
         self.ver_badge = tk.Label(ver_frame, text=f"v{local_ver}", font=("Segoe UI", 9, "bold"), bg="#1E40AF", fg="#FFFFFF", padx=8, pady=3)
         self.ver_badge.pack(side="left", padx=(0, 8))
+
+        btn_guide = ttk.Button(ver_frame, text="📖 คู่มือการใช้งาน", style="Secondary.TButton", command=self.open_guide)
+        btn_guide.pack(side="left", padx=(0, 6))
 
         btn_update = ttk.Button(ver_frame, text="🔄 ตรวจสอบอัปเดต", style="Secondary.TButton", command=self.check_update_action)
         btn_update.pack(side="left")
@@ -609,6 +612,13 @@ class SettingsApp(tk.Tk):
             return
 
         messagebox.showinfo("แจ้งเตือน", msg)
+
+    def open_guide(self):
+        guide_path = os.path.abspath(os.path.join("how_to_install", "index.html"))
+        if os.path.exists(guide_path):
+            open_path(guide_path)
+        else:
+            messagebox.showwarning("แจ้งเตือน", "ไม่พบไฟล์คู่มือ how_to_install/index.html")
 
     def check_update_action(self):
         self.status_label.config(text="กำลังตรวจสอบอัปเดตจาก GitHub...")

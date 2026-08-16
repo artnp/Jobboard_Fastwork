@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือการติดตั้งและใช้งาน Fastwork Auto-Offer Bot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0066FF;
+            --primary-dark: #004ecc;
+            --primary-light: #EEF4FF;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --dark: #0F172A;
+            --gray-800: #1E293B;
+            --gray-600: #475569;
+            --gray-400: #94A3B8;
+            --gray-200: #E2E8F0;
+            --gray-100: #F8FAFC;
+            --white: #FFFFFF;
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+            --badge-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #F1F5F9;
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        /* Top Header Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #0066FF, #00C6FF);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 20px;
+            box-shadow: 0 4px 10px rgba(0, 102, 255, 0.3);
+        }
+
+        .logo-text {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .badge-ver {
+            background: #E0E7FF;
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Hero Banner */
+        .hero {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            color: white;
+            padding: 4rem 2rem 5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 2.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #FFFFFF, #93C5FD);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: #94A3B8;
+            max-width: 680px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 960px;
+            margin: -2.5rem auto 4rem;
+            padding: 0 1.5rem;
+        }
+
+        /* OS Tab Switcher */
+        .os-selector {
+            background: white;
+            padding: 0.5rem;
+            border-radius: 14px;
+            display: flex;
+            gap: 8px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .os-btn {
+            flex: 1;
+            padding: 0.85rem;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .os-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: var(--badge-shadow);
+        }
+
+        /* Step Cards */
+        .step-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2.2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--gray-200);
+            position: relative;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .step-card:hover {
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.08);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-num {
+            width: 44px;
+            height: 44px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border: 2px solid #BFDBFE;
+        }
+
+        .step-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .step-subtitle {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+            font-weight: 400;
+        }
+
+        /* Callouts / Notes */
+        .callout {
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin: 1.2rem 0;
+            display: flex;
+            gap: 12px;
+            font-size: 0.95rem;
+        }
+
+        .callout-warning {
+            background: #FFFBEB;
+            border-left: 4px solid var(--warning);
+            color: #92400E;
+        }
+
+        .callout-info {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            color: #1E40AF;
+        }
+
+        .callout-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--success);
+            color: #065F46;
+        }
+
+        /* Code & Commands */
+        .code-block {
+            background: #0F172A;
+            color: #E2E8F0;
+            padding: 1rem 1.2rem;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.92rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .copy-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: 'Prompt', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary);
+        }
+
+        /* Visual Diagram / Mockup UI */
+        .ui-mockup {
+            background: #F8FAFC;
+            border: 2px dashed #CBD5E1;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .ui-mockup-header {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--gray-800);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-preview {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: default;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+
+        .btn-blue {
+            background: #0066FF;
+            color: white;
+        }
+
+        .btn-green {
+            background: #10B981;
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #1E293B;
+            border: 1px solid #CBD5E1;
+        }
+
+        .mockup-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 1rem;
+        }
+
+        .mockup-card {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 1.2rem;
+        }
+
+        .mockup-card h4 {
+            font-size: 1rem;
+            margin-bottom: 6px;
+            color: var(--dark);
+        }
+
+        .mockup-card p {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+        }
+
+        /* Checkbox styling */
+        .chk-demo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #E2E8F0;
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin: 0.8rem 0;
+        }
+
+        .chk-box {
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--gray-200);
+            background: white;
+        }
+
+        .highlight {
+            font-weight: 600;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="logo-wrap">
+            <div class="logo-icon">F</div>
+            <div class="logo-text">Fastwork Auto-Offer Bot</div>
+            <span class="badge-ver">v1.0.0 Manual</span>
+        </div>
+        <div>
+            <span style="font-size: 0.9rem; color: #64748B;">⚡ คู่มือติดตั้งฉบับสมบูรณ์</span>
+        </div>
+    </nav>
+
+    <!-- Hero Header -->
+    <header class="hero">
+        <h1>คู่มือติดตั้งและตั้งค่า Fastwork Bot</h1>
+        <p>ขั้นตอนการติดตั้งระบบบอทตรวจจับงานและยื่นเสนออัตโนมัติ 100% ตั้งแต่การติดตั้ง Python จนถึงการเริ่มเปิดระบบทำงาน</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+
+        <!-- OS Selector -->
+        <div class="os-selector">
+            <button class="os-btn active" id="btn-win" onclick="switchOS('win')">
+                🪟 สำหรับผู้ใช้งาน Windows
+            </button>
+            <button class="os-btn" id="btn-mac" onclick="switchOS('mac')">
+                🍏 สำหรับผู้ใช้งาน macOS (Mac)
+            </button>
+        </div>
+
+        <!-- ================= STEP 1: INSTALL PYTHON ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">1</div>
+                <div>
+                    <h2 class="step-title">ติดตั้งโปรแกรม Python (ครั้งแรกครั้งเดียว)</h2>
+                    <p class="step-subtitle">หากในเครื่องของคุณมี Python อยู่แล้ว สามารถข้ามไปขั้นตอนที่ 2 ได้เลย</p>
+                </div>
+            </div>
+
+            <!-- Windows Python Guide -->
+            <div class="os-content-win">
+                <p>1. ดาวน์โหลดโปรแกรม Python 3.10 หรือใหม่กว่า ได้ที่เว็บไซต์ทางการ: <a href="https://www.python.org/downloads/" target="_blank" style="color: var(--primary); font-weight: 600;">python.org/downloads</a></p>
+                <p>2. ดับเบิลคลิกไฟล์ติดตั้ง Python ที่ดาวน์โหลดมา</p>
+
+                <div class="callout callout-warning">
+                    <span style="font-size: 1.5rem;">⚠️</span>
+                    <div>
+                        <strong>จุดสำคัญที่สุด (ห้ามลืมเด็ดขาด!):</strong><br>
+                        ในหน้าแรกของตัวติดตั้ง ให้ <strong>ติ๊กถูกที่ช่อง [ ✔ ] Add Python.exe to PATH</strong> ที่อยู่ด้านล่างสุดก่อน แล้วค่อยกด <strong>Install Now</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mac Python Guide -->
+            <div class="os-content-mac" style="display: none;">
+                <p>1. ดาวน์โหลด Python สำหรับ macOS ได้ที่: <a href="https://www.python.org/downloads/macos/" target="_blank" style="color: var(--primary); font-weight: 600;">python.org/downloads/macos</a></p>
+                <p>2. เปิดไฟล์ <code>.pkg</code> แล้วกด <strong>Continue / Install</strong> ตามขั้นตอนจนเสร็จสิ้น</p>
+            </div>
+        </div>
+
+        <!-- ================= STEP 2: INSTALL DEPENDENCIES ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">2</div>
+                <div>
+                    <h2 class="step-title">ติดตั้ง Library เสริม (Dependencies)</h2>
+                    <p class="step-subtitle">เปิด Command Prompt หรือ Terminal เพื่อติดตั้งโมดูลที่บอทต้องใช้</p>
+                </div>
+            </div>
+
+            <p>คัดลอกคำสั่งด้านล่างนี้ไปวางใน <strong>Command Prompt (Windows)</strong> หรือ <strong>Terminal (Mac)</strong> แล้วกด Enter:</p>
+
+            <div class="code-block">
+                <span id="cmd-pip">pip install requests pillow pystray plyer psutil playwright && playwright install chromium</span>
+                <button class="copy-btn" onclick="copyText('cmd-pip')">📋 คัดลอก</button>
+            </div>
+
+            <div class="callout callout-success">
+                <span>✅</span>
+                <div>
+                    คำสั่งนี้จะติดตั้งระบบแจ้งเตือน Desktop, ระบบ GUI, และ Browser Chromium สำหรับดึงคุกกี้ Token อัตโนมัติให้ครบถ้วนในคำสั่งเดียว
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STEP 3: LAUNCH SETTINGS ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">3</div>
+                <div>
+                    <h2 class="step-title">เปิดหน้าต่างตั้งค่าบอท (Control Panel)</h2>
+                    <p class="step-subtitle">เข้าสู่หน้าต่างตั้งค่าเพื่อเชื่อมต่อบัญชี Fastwork และปรับแต่งข้อความ</p>
+                </div>
+            </div>
+
+            <!-- Windows Open -->
+            <div class="os-content-win">
+                <p>ดับเบิลคลิกไฟล์ที่ชื่อว่า <strong>เปิดการตั้งค่า_Settings.bat</strong> ในโฟลเดอร์โปรแกรม</p>
+                <div class="ui-mockup">
+                    <div class="ui-mockup-header">📁 ไฟล์เปิดโปรแกรมบน Windows:</div>
+                    <button class="btn-preview btn-outline">⚙️ เปิดการตั้งค่า_Settings.bat</button>
+                    <span style="font-size: 0.9rem; color: #64748B; margin-left: 10px;">← ดับเบิลคลิกไฟล์นี้เพื่อเริ่มโปรแกรม</span>
+                </div>
+            </div>
+
+            <!-- Mac Open -->
+            <div class="os-content-mac" style="display: none;">
+                <p>ดับเบิลคลิกไฟล์ที่ชื่อว่า <strong>เปิดการตั้งค่า_Settings.command</strong> ในโฟลเดอร์โปรแกรม</p>
+                <div class="ui-mockup">
+                    <div class="ui-mockup-header">📁 ไฟล์เปิดโปรแกรมบน macOS:</div>
+                    <button class="btn-preview btn-outline">🍏 เปิดการตั้งค่า_Settings.command</button>
+                </div>
+            </div>
+
+            <p style="font-size: 0.95rem; color: var(--gray-600);">💡 <em>เมื่อเปิดไฟล์นี้ ระบบจะสั่งรันบอทใน Background ทันที พร้อมแสดงหน้าต่างตั้งค่า GUI ขึ้นมา</em></p>
+        </div>
+
+        <!-- ================= STEP 4: LOGIN & TOKEN ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">4</div>
+                <div>
+                    <h2 class="step-title">ล็อกอิน Fastwork เพื่อดึง Token และสินค้าอัตโนมัติ</h2>
+                    <p class="step-subtitle">เชื่อมต่อกับบัญชี Fastwork ของคุณใน 1 คลิก ไม่ต้องกรอก Token เอง</p>
+                </div>
+            </div>
+
+            <p>1. ในหน้าต่างตั้งค่า แท็บแรก <strong>"🔑 บัญชี & คุกกี้ Token"</strong> ให้กดปุ่มสีฟ้า:</p>
+
+            <div class="ui-mockup">
+                <div class="ui-mockup-header">🎯 ปุ่มกดดึง Token อัตโนมัติ:</div>
+                <button class="btn-preview btn-blue">🌐 ล็อกอิน Fastwork เพื่อดึง Token อัตโนมัติ</button>
+            </div>
+
+            <p>2. ระบบจะเปิดหน้าเว็บ <code>fastwork.co</code> ขึ้นมา ให้คุณทำการ <strong>เข้าสู่ระบบ (Login)</strong> ด้วยบัญชี Fastwork ของคุณตามปกติ</p>
+            <p>3. เมื่อเข้าสู่ระบบเสร็จสิ้น ระบบบอทจะ <strong>ดักจับ Token + ดึงรายการสินค้าทั้งหมดของคุณ</strong> มาบันทึกให้อัตโนมัติทันที!</p>
+        </div>
+
+        <!-- ================= STEP 5: OFFER & KEYWORDS ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">5</div>
+                <div>
+                    <h2 class="step-title">ตั้งค่าคีย์เวิร์ด และใบเสนอราคา</h2>
+                    <p class="step-subtitle">กำหนดประเภทงานที่ต้องการรับ ราคา และข้อความที่จะตอบกลับผู้ว่าจ้าง</p>
+                </div>
+            </div>
+
+            <div class="mockup-grid">
+                <div class="mockup-card">
+                    <h4>🎯 1. แท็บ "คีย์เวิร์ดหางาน"</h4>
+                    <p>ใส่คำที่ต้องการให้บอทตรวจจับ (1 บรรทัดต่อ 1 คำ) เช่น:</p>
+                    <div style="background: #F1F5F9; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin-top: 6px;">
+                        ตัดต่อรูปภาพ<br>
+                        แก้ไขเอกสาร<br>
+                        photoshop
+                    </div>
+                </div>
+
+                <div class="mockup-card">
+                    <h4>✍️ 2. แท็บ "ใบเสนองาน"</h4>
+                    <p>ใส่ข้อความแนะนำตัวและบริการของคุณ (ความยาวอย่างน้อย 100 ตัวอักษร) พร้อมกำหนดราคางบประมาณเริ่มต้นและจำนวนวันทำงาน</p>
+                </div>
+
+                <div class="mockup-card">
+                    <h4>📎 3. แท็บ "ไฟล์ผลงาน PDF"</h4>
+                    <p>นำไฟล์ PDF ผลงาน หรือ รูปภาพตัวอย่างงาน มาวางไว้ในโฟลเดอร์ <code>portfolio/</code> บอทจะแนบให้ผู้ว่าจ้างดูอัตโนมัติทุกครั้งที่ยื่นงาน</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STEP 6: STARTUP & SAVE ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">6</div>
+                <div>
+                    <h2 class="step-title">บันทึกการตั้งค่า & เริ่มต้นโปรแกรมอัตโนมัติ</h2>
+                    <p class="step-subtitle">ตั้งค่าให้บอทเปิดทำงานทุกครั้งที่เปิดคอมพิวเตอร์</p>
+                </div>
+            </div>
+
+            <p>1. ในแท็บ <strong>"🔑 บัญชี & คุกกี้ Token"</strong> ให้ติ๊กถูกที่ช่อง:</p>
+
+            <div class="chk-demo">
+                <div class="chk-box">✔</div>
+                <span>🚀 เริ่มต้นโปรแกรมเมื่อเปิดเครื่อง (Startup)</span>
+            </div>
+
+            <p>2. กดปุ่มสีน้ำเงินที่มุมขวาล่างเพื่อบันทึก:</p>
+
+            <div class="ui-mockup">
+                <button class="btn-preview btn-blue" style="font-size: 1rem; padding: 12px 24px;">💾 บันทึกการตั้งค่าทั้งหมด (Save Settings)</button>
+            </div>
+
+            <div class="callout callout-success">
+                <span>🎉</span>
+                <div>
+                    <strong>ยินดีด้วย! บอทของคุณพร้อมทำงานสมบูรณ์แบบแล้ว</strong><br>
+                    บอทจะคอยตรวจจับงานใหม่ใน Background ตลอดเวลา และแจ้งเตือนผ่านมุมขวาล่างจอทันทีที่เจองานตรงคีย์เวิร์ดครับ!
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STEP 7: UPDATE ================= -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-num">7</div>
+                <div>
+                    <h2 class="step-title">การอัปเดตเวอร์ชันใหม่ (Patch Update)</h2>
+                    <p class="step-subtitle">อัปเกรดระบบให้ทันสมัยตลอดเวลาในคลิกเดียว</p>
+                </div>
+            </div>
+
+            <p>เมื่อมี Patch ใหม่ หรือ Fastwork มีการอัปเดตระบบ คุณสามารถกดปุ่มที่มุมขวาบนของหน้าต่างตั้งค่าได้ตลอดเวลา:</p>
+
+            <div class="ui-mockup">
+                <button class="btn-preview btn-outline">🔄 ตรวจสอบอัปเดต</button>
+            </div>
+
+            <p>ระบบจะเช็คและดาวน์โหลดโค้ดเวอร์ชันล่าสุดมาลงเครื่องให้อัตโนมัติ โดย <strong>ไม่ลบการตั้งค่าและ Token ของคุณ</strong> ครับ</p>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 Fastwork Auto-Offer Bot. All rights reserved.</p>
+        <p style="font-size: 0.8rem; margin-top: 5px; color: #94A3B8;">ระบบผู้ช่วยฟรีแลนซ์อัจฉริยะสำหรับ Fastwork.co</p>
+    </footer>
+
+    <script>
+        function switchOS(os) {
+            const btnWin = document.getElementById('btn-win');
+            const btnMac = document.getElementById('btn-mac');
+            const winContents = document.querySelectorAll('.os-content-win');
+            const macContents = document.querySelectorAll('.os-content-mac');
+
+            if (os === 'win') {
+                btnWin.classList.add('active');
+                btnMac.classList.remove('active');
+                winContents.forEach(el => el.style.display = 'block');
+                macContents.forEach(el => el.style.display = 'none');
+            } else {
+                btnMac.classList.add('active');
+                btnWin.classList.remove('active');
+                winContents.forEach(el => el.style.display = 'none');
+                macContents.forEach(el => el.style.display = 'block');
+            }
+        }
+
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ คัดลอกคำสั่งเรียบร้อยแล้ว!');
+            });
+        }
+    </script>
+</body>
+</html>

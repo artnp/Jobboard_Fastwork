@@ -558,23 +558,35 @@ def on_open_settings_gui(icon, item):
     except Exception as e:
         logger.error(f"Error opening settings GUI: {e}")
 
+def open_path(target_path):
+    """Opens a file or directory in the default system file explorer / viewer cross-platform."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(target_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", target_path])
+        else:
+            subprocess.Popen(["xdg-open", target_path])
+    except Exception as e:
+        logger.error(f"Error opening path {target_path}: {e}")
+
 def on_check_update(icon, item):
     on_open_settings_gui(icon, item)
 
 def on_open_portfolio(icon, item):
     if not os.path.exists(PORTFOLIO_DIR):
         os.makedirs(PORTFOLIO_DIR, exist_ok=True)
-    os.startfile(os.path.abspath(PORTFOLIO_DIR))
+    open_path(os.path.abspath(PORTFOLIO_DIR))
 
 def on_open_config(icon, item):
     if os.path.exists(CONFIG_FILE):
-        os.startfile(CONFIG_FILE)
+        open_path(os.path.abspath(CONFIG_FILE))
 
 def on_open_folder(icon, item):
     if getattr(sys, 'frozen', False):
-        os.startfile(os.path.dirname(sys.executable))
+        open_path(os.path.dirname(sys.executable))
     else:
-        os.startfile(os.getcwd())
+        open_path(os.getcwd())
 
 def on_exit(icon, item):
     stop_event.set()

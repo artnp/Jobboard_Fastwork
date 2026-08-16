@@ -1,0 +1,25 @@
+{
+  "keywords": [
+    "แก้ไขข้อความ",
+    "แก้ไขภาพ",
+    "แก้ไขรูป",
+    "ตัดต่อรูป",
+    "ตัดต่อภาพ",
+    "ตัดต่อเอกสาร",
+    "photoshop"
+  ],
+  "exclude_keywords": [],
+  "check_interval_seconds": 300,
+  "mode": "auto_offer",
+  "desktop_notification": true,
+  "auto_open_browser": true,
+  "start_on_boot": false,
+  "default_brief_url": "https://fastwork.co",
+  "access_token": "",
+  "auto_offer_config": {
+    "budget": 100,
+    "working_days": 1,
+    "description": "สวัสดีครับ ยินดีให้บริการครับ พร้อมรับงานและส่งมอบได้ตามต้องการอย่างรวดเร็วและมีคุณภาพครับ"
+  },
+  "user_products": []
+}

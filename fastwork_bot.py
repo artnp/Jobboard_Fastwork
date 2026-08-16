@@ -5,6 +5,7 @@ import json
 import logging
 import threading
 import subprocess
+import re
 import requests
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
@@ -168,6 +169,17 @@ def fetch_jobs():
         logger.error(f"Failed to fetch jobs from API: {e}")
         return []
 
+def _is_keyword_in_text(kw: str, text: str) -> bool:
+    kw_clean = kw.strip()
+    if not kw_clean:
+        return False
+    # If keyword consists only of ASCII letters/digits/hyphens/spaces (e.g. 'ebook', 'seo', 'pdf', 'font')
+    # ensure it's not part of another English word (e.g. 'facebook', 'macbook')
+    if re.match(r'^[a-zA-Z0-9\s\-]+$', kw_clean):
+        pattern = r'(?<![a-zA-Z0-9])' + re.escape(kw_clean.lower()) + r'(?![a-zA-Z0-9])'
+        return bool(re.search(pattern, text, re.IGNORECASE))
+    return kw_clean.lower() in text
+
 def match_keywords(job, keywords, exclude_keywords):
     title = job.get("title", "") or ""
     description = job.get("description", "") or ""
@@ -176,14 +188,13 @@ def match_keywords(job, keywords, exclude_keywords):
     text_content = f"{title} {description} {tag_name}".lower()
 
     for ex_kw in exclude_keywords:
-        if ex_kw.strip() and ex_kw.lower() in text_content:
+        if _is_keyword_in_text(ex_kw, text_content):
             return False, []
 
     matched = []
     for kw in keywords:
-        kw_clean = kw.strip()
-        if kw_clean and kw_clean.lower() in text_content:
-            matched.append(kw_clean)
+        if _is_keyword_in_text(kw, text_content):
+            matched.append(kw.strip())
 
     return len(matched) > 0, matched
 
@@ -533,15 +544,9 @@ def background_loop(icon):
         except Exception as e:
             logger.error(f"Error in check cycle: {e}")
 
+        # Sleep efficiently without CPU wakeups until interval expires or manual check is triggered
+        manual_trigger_event.wait(timeout=interval)
         manual_trigger_event.clear()
-        wait_seconds = 0
-        while wait_seconds < interval and not stop_event.is_set():
-            if manual_trigger_event.is_set():
-                logger.info("Manual check triggered via System Tray.")
-                manual_trigger_event.clear()
-                break
-            time.sleep(1)
-            wait_seconds += 1
 
     logger.info("Background monitoring thread stopped.")
 
@@ -595,6 +600,7 @@ def on_open_folder(icon, item):
 
 def on_exit(icon, item):
     stop_event.set()
+    manual_trigger_event.set()
     icon.stop()
 
 def get_status_text(item):
@@ -608,10 +614,7 @@ def main():
         pystray.Menu.SEPARATOR,
         item("🔍 ตรวจหางานทันที (Check Now)", on_check_now),
         item("⚙️ หน้าต่างตั้งค่าบอท (Settings UI)", on_open_settings_gui),
-        item("📖 คู่มือการติดตั้ง & ใช้งาน (Guide)", on_open_guide),
         item("🔄 ตรวจสอบอัปเดต (Check Update)", on_check_update),
-        item("📎 เปิดโฟลเดอร์ผลงาน PDF (Portfolio)", on_open_portfolio),
-        item("📁 เปิดโฟลเดอร์โปรแกรม", on_open_folder),
         pystray.Menu.SEPARATOR,
         item("❌ ปิดโปรแกรม (Exit)", on_exit)
     )

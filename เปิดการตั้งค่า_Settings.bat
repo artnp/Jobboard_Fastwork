@@ -1,12 +1,11 @@
 @echo off
 chcp 65001 >nul
-title Fastwork Bot
 cd /d "%~dp0"
 
-REM เริ่มการทำงานของบอทใน Background
-start "" wscript.exe "start_bot.vbs"
+REM 1. รัน start_bot.vbs เข้า System Tray
+start "" "%~dp0start_bot.vbs"
 
-REM เปิดหน้าต่างตั้งค่าบอท
-start "" pythonw "settings_gui.py"
+REM 2. เปิดหน้าต่างตั้งค่า Settings (แบบไม่มีหน้าต่างดำ)
+start "" pythonw "%~dp0settings_gui.py"
 
 exit

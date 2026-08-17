@@ -1,4 +1,6 @@
 Set WshShell = CreateObject("WScript.Shell")
-' Run pythonw fastwork_bot.py completely hidden (0 = hidden window, False = don't wait for process to finish)
-WshShell.Run "pythonw fastwork_bot.py", 0, False
-
+Set fso = CreateObject("Scripting.FileSystemObject")
+strPath = fso.GetParentFolderName(WScript.ScriptFullName)
+WshShell.CurrentDirectory = strPath
+' รัน bot ด้วย python.exe (bot จะ FreeConsole ตัวเองเพื่อซ่อน console window)
+WshShell.Run "python """ & strPath & "\fastwork_bot.py""", 0, False

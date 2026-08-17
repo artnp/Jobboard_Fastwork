@@ -228,8 +228,25 @@ def similarity_score(str1: str, str2: str) -> float:
 
     return (2.0 * intersection) / (len(bg1) + len(bg2))
 
+def get_all_monitoring_keywords(config):
+    """Combines global keywords with all product-specific keywords."""
+    all_kws = []
+    seen = set()
+    for kw in config.get("keywords", []):
+        k = kw.strip()
+        if k and k.lower() not in seen:
+            seen.add(k.lower())
+            all_kws.append(k)
+    for prod in config.get("user_products", []):
+        for kw in prod.get("keywords", []):
+            k = kw.strip()
+            if k and k.lower() not in seen:
+                seen.add(k.lower())
+                all_kws.append(k)
+    return all_kws
+
 def select_best_product(job, config):
-    """Select the best matching user product for a job based on title, keywords, tags, and text similarity."""
+    """Select the best matching user product for a job based on direct product keywords, tags, title, and text similarity."""
     user_products = config.get("user_products", [])
     if not user_products:
         return None
@@ -245,20 +262,27 @@ def select_best_product(job, config):
     for prod in user_products:
         score = 0.0
         
-        # 1. Check extra keywords / tags
-        tags = prod.get("tags", []) + prod.get("keywords", [])
+        # 1. Direct Product Keywords (Highest Priority - 100+ points per match)
+        prod_kws = prod.get("keywords", [])
+        for pkw in prod_kws:
+            if _is_keyword_in_text(pkw, job_text):
+                # Longer keywords have even higher specificity
+                score += 100.0 + (len(pkw.strip()) * 2.0)
+        
+        # 2. Check extra tags
+        tags = prod.get("tags", [])
         for tag in tags:
             if tag and tag.lower() in job_text:
                 score += 15.0
         
-        # 2. Check match alias if defined
+        # 3. Check match alias if defined
         match_title = prod.get("match", "").lower()
         if match_title and match_title in job_text:
             score += 20.0
 
-        # 3. Product title words matching
+        # 4. Product title words matching
         prod_title = prod.get("title", "")
-        clean_symbols = ["|", "✅", "❌", "⚠️", "🔥", "📌", "✨", "[", "]", "(", ")", "/", "*", "#", "📖", "👆"]
+        clean_symbols = ["|", "✅", "❌", "⚠️", "🔥", "📌", "✨", "[", "]", "(", ")", "/", "*", "#", "📖", "👆", "🎬", "🤖", "🔧", "🌐"]
         title_for_words = prod_title
         for sym in clean_symbols:
             title_for_words = title_for_words.replace(sym, " ")
@@ -267,7 +291,7 @@ def select_best_product(job, config):
             if w.lower() in job_text:
                 score += 10.0
 
-        # 4. Bigram similarity score
+        # 5. Bigram similarity score
         sim = similarity_score(job_text, prod_title)
         score += sim * 10.0
 
@@ -459,7 +483,7 @@ def submit_offer(job_id, job, config):
 
 def check_jobs_cycle(config, notifier, seen_jobs):
     global last_status_message
-    keywords = config.get("keywords", [])
+    keywords = get_all_monitoring_keywords(config)
     exclude_keywords = config.get("exclude_keywords", [])
     mode = config.get("mode", "notify")
 
@@ -606,7 +630,60 @@ def on_exit(icon, item):
 def get_status_text(item):
     return f"🟢 Fastwork Bot: {last_status_message}"
 
+def create_f_icon():
+    """Load or generate the fastwork 'F' icon for system tray."""
+    icon_png = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
+    icon_ico = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
+    
+    if os.path.exists(icon_png):
+        try:
+            return Image.open(icon_png)
+        except Exception:
+            pass
+    if os.path.exists(icon_ico):
+        try:
+            return Image.open(icon_ico)
+        except Exception:
+            pass
+
+    # Fallback dynamically generated crisp blue F icon
+    img = Image.new('RGBA', (64, 64), color=(0, 102, 255, 255))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([16, 12, 24, 52], fill='white')
+    draw.rectangle([24, 12, 48, 20], fill='white')
+    draw.rectangle([24, 28, 42, 36], fill='white')
+    return img
+
+_bot_socket_lock = None
+
+def acquire_single_instance_lock():
+    """Ensure only one instance of fastwork_bot runs in system tray at a time using local socket lock."""
+    global _bot_socket_lock
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(('127.0.0.1', 58923))
+        s.listen(5)
+        _bot_socket_lock = s
+        
+        def drain_pings():
+            while True:
+                try:
+                    conn, _ = s.accept()
+                    conn.close()
+                except Exception:
+                    break
+        threading.Thread(target=drain_pings, daemon=True).start()
+        return True
+    except Exception:
+        return False
+
 def main():
+    if not acquire_single_instance_lock():
+        logger.info("⚡ Fastwork Bot กำลังทำงานอยู่ใน System Tray อยู่แล้ว")
+        return
+
     icon_image = create_f_icon()
 
     menu = pystray.Menu(

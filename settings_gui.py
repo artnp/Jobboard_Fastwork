@@ -317,10 +317,22 @@ def fetch_fastwork_me(token):
 
 class TagInputWidget(tk.Frame):
     """Widget สำหรับจัดการคีย์เวิร์ดแบบ Tag Chips อัจฉริยะ (ใช้ tk.Text window_create เรนเดอร์ลื่นไหลและตัดบรรทัดอัตโนมัติ)"""
-    def __init__(self, parent, on_tags_changed=None, bg="#F1F5F9", **kwargs):
+    def __init__(self, parent, on_tags_changed=None, bg="#F1F5F9",
+                 chip_bg="#EFF6FF", chip_border="#BFDBFE", chip_fg="#1D4ED8", chip_icon="🏷️",
+                 del_fg="#93C5FD", del_hover_fg="#EF4444",
+                 placeholder_text="ยังไม่มีคีย์เวิร์ดเฉพาะ (พิมพ์ในช่องด้านบนแล้วกด Enter เพื่อเพิ่มแท็ก)",
+                 hint_text="💡 พิมพ์คีย์เวิร์ดแล้วกด Enter หรือเครื่องหมายจุลภาค (,) เพื่อเพิ่มแท็ก • คลิก ✖ บนแท็กเพื่อลบ",
+                 btn_text="➕ เพิ่มแท็ก", btn_style="Primary.TButton", box_height=3, **kwargs):
         super().__init__(parent, bg=bg, **kwargs)
         self.on_tags_changed = on_tags_changed
         self.tags = []
+        self.chip_bg = chip_bg
+        self.chip_border = chip_border
+        self.chip_fg = chip_fg
+        self.chip_icon = chip_icon
+        self.del_fg = del_fg
+        self.del_hover_fg = del_hover_fg
+        self.placeholder_text = placeholder_text
 
         # 1. Entry Input Row
         entry_row = tk.Frame(self, bg=bg)
@@ -334,7 +346,7 @@ class TagInputWidget(tk.Frame):
         self.entry.bind("<BackSpace>", self._on_backspace)
         add_text_context_menu(self.entry, on_change=self._on_entry_paste_check)
 
-        btn_add = ttk.Button(entry_row, text="➕ เพิ่มแท็ก", style="Primary.TButton", command=self._add_from_entry)
+        btn_add = ttk.Button(entry_row, text=btn_text, style=btn_style, command=self._add_from_entry)
         btn_add.pack(side="left", padx=(0, 4))
 
         btn_clear = ttk.Button(entry_row, text="🗑️ ล้างทั้งหมด", style="Secondary.TButton", command=self.clear_all_tags)
@@ -344,7 +356,7 @@ class TagInputWidget(tk.Frame):
         box_frame = tk.Frame(self, bg="#CBD5E1", padx=1, pady=1)
         box_frame.pack(fill="both", expand=True, padx=2, pady=(0, 2))
 
-        self.tag_text = tk.Text(box_frame, height=4, font=("Segoe UI", 10), wrap="word", relief="flat", borderwidth=0, bg="#FFFFFF", padx=6, pady=6, cursor="arrow")
+        self.tag_text = tk.Text(box_frame, height=box_height, font=("Segoe UI", 10), wrap="word", relief="flat", borderwidth=0, bg="#FFFFFF", padx=6, pady=6, cursor="arrow")
         scroll = ttk.Scrollbar(box_frame, orient="vertical", command=self.tag_text.yview)
         self.tag_text.configure(yscrollcommand=scroll.set)
 
@@ -352,8 +364,12 @@ class TagInputWidget(tk.Frame):
         scroll.pack(side="right", fill="y")
         self.tag_text.config(state="disabled")
 
-        hint_lbl = tk.Label(self, text="💡 พิมพ์คีย์เวิร์ดแล้วกด Enter หรือเครื่องหมายจุลภาค (,) เพื่อเพิ่มแท็ก • คลิก ✖ บนแท็กเพื่อลบ", font=("Segoe UI", 8), bg=bg, fg="#64748B")
+        hint_lbl = tk.Label(self, text=hint_text, font=("Segoe UI", 8), bg=bg, fg="#64748B")
         hint_lbl.pack(anchor="w", padx=2, pady=(2, 0))
+
+    def flush_entry(self):
+        """Forces any typed uncommitted entry to be parsed and added to tags."""
+        self._add_from_entry()
 
     def _on_enter_pressed(self, event):
         self._add_from_entry()
@@ -419,22 +435,23 @@ class TagInputWidget(tk.Frame):
         self.tag_text.delete("1.0", "end")
 
         if not self.tags:
-            empty_lbl = tk.Label(self.tag_text, text="ยังไม่มีคีย์เวิร์ดเฉพาะ (พิมพ์ในช่องด้านบนแล้วกด Enter เพื่อเพิ่มแท็ก)", font=("Segoe UI", 9, "italic"), bg="#FFFFFF", fg="#94A3B8")
+            empty_lbl = tk.Label(self.tag_text, text=self.placeholder_text, font=("Segoe UI", 9, "italic"), bg="#FFFFFF", fg="#94A3B8")
             self.tag_text.window_create("end", window=empty_lbl)
         else:
             for tag in self.tags:
-                chip = tk.Frame(self.tag_text, bg="#EFF6FF", highlightbackground="#BFDBFE", highlightthickness=1, padx=6, pady=2)
-                lbl = tk.Label(chip, text=f"🏷️ {tag}", bg="#EFF6FF", fg="#1D4ED8", font=("Segoe UI", 9, "bold"))
+                chip = tk.Frame(self.tag_text, bg=self.chip_bg, highlightbackground=self.chip_border, highlightthickness=1, padx=6, pady=2)
+                icon_prefix = f"{self.chip_icon} " if self.chip_icon else ""
+                lbl = tk.Label(chip, text=f"{icon_prefix}{tag}", bg=self.chip_bg, fg=self.chip_fg, font=("Segoe UI", 9, "bold"))
                 lbl.pack(side="left", padx=(0, 4))
                 
-                btn_del = tk.Label(chip, text="✖", bg="#EFF6FF", fg="#93C5FD", font=("Segoe UI", 8, "bold"), cursor="hand2")
+                btn_del = tk.Label(chip, text="✖", bg=self.chip_bg, fg=self.del_fg, font=("Segoe UI", 8, "bold"), cursor="hand2")
                 btn_del.pack(side="left")
                 
                 def make_del(t):
                     return lambda e: self.remove_tag(t)
                 btn_del.bind("<Button-1>", make_del(tag))
-                btn_del.bind("<Enter>", lambda e, b=btn_del: b.config(fg="#EF4444"))
-                btn_del.bind("<Leave>", lambda e, b=btn_del: b.config(fg="#93C5FD"))
+                btn_del.bind("<Enter>", lambda e, b=btn_del: b.config(fg=self.del_hover_fg))
+                btn_del.bind("<Leave>", lambda e, b=btn_del: b.config(fg=self.del_fg))
 
                 self.tag_text.window_create("end", window=chip)
                 self.tag_text.insert("end", "  ")
@@ -445,8 +462,8 @@ class SettingsApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Fastwork Bot - ระบบตั้งค่าและจัดการบอท")
-        self.geometry("860x730")
-        self.minsize(760, 640)
+        self.geometry("860x780")
+        self.minsize(760, 660)
         
         # Apply icon if available
         if os.path.exists(ICON_FILE):
@@ -700,9 +717,9 @@ class SettingsApp(tk.Tk):
     # ---------------- TAB 3: PRODUCTS ----------------
     def build_tab_products(self):
         container = tk.Frame(self.tab_products, bg=self.bg_color)
-        container.pack(fill="both", expand=True, padx=15, pady=12)
+        container.pack(fill="both", expand=True, padx=15, pady=10)
 
-        card = tk.Frame(container, bg=self.card_bg, highlightbackground=self.border_color, highlightthickness=1, padx=15, pady=12)
+        card = tk.Frame(container, bg=self.card_bg, highlightbackground=self.border_color, highlightthickness=1, padx=14, pady=10)
         card.pack(fill="both", expand=True)
 
         top_row = tk.Frame(card, bg=self.card_bg)
@@ -713,14 +730,14 @@ class SettingsApp(tk.Tk):
         sync_prod_btn = ttk.Button(top_row, text="🔄 ดึงสินค้าล่าสุดจาก Fastwork", style="Primary.TButton", command=self.sync_account_and_products)
         sync_prod_btn.pack(side="right")
 
-        tk.Label(card, text="คลิกเลือกสินค้าในตารางด้านบน แล้วพิมพ์คีย์เวิร์ดเฉพาะในช่องด้านล่าง (เมื่อเจองานที่ตรง บอทจะเลือกส่งสินค้านี้ทันที 100%)", font=("Segoe UI", 9), bg=self.card_bg, fg=self.text_muted).pack(anchor="w", pady=(0, 6))
+        tk.Label(card, text="คลิกเลือกสินค้าในตารางด้านบน แล้วพิมพ์คีย์เวิร์ดเฉพาะในช่องด้านล่าง (เมื่อเจองานที่ตรง บอทจะเลือกส่งสินค้านี้ทันที 100%)", font=("Segoe UI", 9), bg=self.card_bg, fg=self.text_muted).pack(anchor="w", pady=(0, 4))
 
         # Products Treeview Table
         tree_frame = tk.Frame(card)
-        tree_frame.pack(fill="x", pady=(0, 6))
+        tree_frame.pack(fill="x", pady=(0, 4))
 
         cols = ("num", "title", "kw_count", "id")
-        self.prod_tree = ttk.Treeview(tree_frame, columns=cols, show="headings", selectmode="browse", height=5)
+        self.prod_tree = ttk.Treeview(tree_frame, columns=cols, show="headings", selectmode="browse", height=4)
         self.prod_tree.heading("num", text="#")
         self.prod_tree.heading("title", text="ชื่องานบริการ (Product Title)")
         self.prod_tree.heading("kw_count", text="คีย์เวิร์ดเฉพาะ")
@@ -738,12 +755,12 @@ class SettingsApp(tk.Tk):
         scroll.pack(side="right", fill="y")
         self.prod_tree.bind("<<TreeviewSelect>>", self.on_prod_tree_selected)
 
-        # Editor Panel for Selected Product Keywords (Tag Chips Mode - Expanded to fill frame)
-        self.prod_editor_card = tk.Frame(card, bg="#F1F5F9", highlightbackground=self.border_color, highlightthickness=1, padx=14, pady=10)
-        self.prod_editor_card.pack(fill="both", expand=True, pady=(8, 0))
+        # Editor Panel for Selected Product Keywords (Tag Chips Mode)
+        self.prod_editor_card = tk.Frame(card, bg="#F1F5F9", highlightbackground=self.border_color, highlightthickness=1, padx=12, pady=6)
+        self.prod_editor_card.pack(fill="both", expand=True, pady=(4, 4))
 
         editor_top = tk.Frame(self.prod_editor_card, bg="#F1F5F9")
-        editor_top.pack(fill="x", pady=(0, 4))
+        editor_top.pack(fill="x", pady=(0, 2))
 
         self.lbl_selected_prod_title = tk.Label(editor_top, text="🎯 คีย์เวิร์ดเฉพาะสำหรับ: (กรุณาคลิกเลือกสินค้าในตารางด้านบน)", font=("Segoe UI", 9, "bold"), bg="#F1F5F9", fg=self.primary_color)
         self.lbl_selected_prod_title.pack(side="left")
@@ -751,9 +768,56 @@ class SettingsApp(tk.Tk):
         self.lbl_kw_count = tk.Label(editor_top, text="จำนวน: 0 คำ", font=("Segoe UI", 9, "bold"), bg="#F1F5F9", fg=self.text_dark)
         self.lbl_kw_count.pack(side="right")
 
-        # Tag Input Widget (Auto Wrap Tags + Enter to add - Expanded)
-        self.tag_widget = TagInputWidget(self.prod_editor_card, on_tags_changed=self.on_prod_tags_changed, bg="#F1F5F9")
+        # Tag Input Widget (Auto Wrap Tags + Enter to add)
+        self.tag_widget = TagInputWidget(
+            self.prod_editor_card,
+            on_tags_changed=self.on_prod_tags_changed,
+            bg="#F1F5F9",
+            chip_bg="#EFF6FF",
+            chip_border="#BFDBFE",
+            chip_fg="#1D4ED8",
+            chip_icon="🏷️",
+            del_fg="#93C5FD",
+            del_hover_fg="#EF4444",
+            placeholder_text="ยังไม่มีคีย์เวิร์ดเฉพาะ (พิมพ์ในช่องด้านบนแล้วกด Enter เพื่อเพิ่มแท็ก)",
+            hint_text="💡 พิมพ์คีย์เวิร์ดแล้วกด Enter หรือเครื่องหมายจุลภาค (,) เพื่อเพิ่มแท็ก • คลิก ✖ บนแท็กเพื่อลบ",
+            btn_text="➕ เพิ่มแท็ก",
+            btn_style="Primary.TButton",
+            box_height=2
+        )
         self.tag_widget.pack(fill="both", expand=True, pady=(2, 0))
+
+        # Editor Panel for Exclude / Blacklist Keywords (คีย์เวิร์ดที่ห้ามโพสต์)
+        self.exclude_editor_card = tk.Frame(card, bg="#FEF2F2", highlightbackground="#FECACA", highlightthickness=1, padx=12, pady=6)
+        self.exclude_editor_card.pack(fill="both", expand=True, pady=(2, 0))
+
+        exclude_top = tk.Frame(self.exclude_editor_card, bg="#FEF2F2")
+        exclude_top.pack(fill="x", pady=(0, 2))
+
+        lbl_exclude_title = tk.Label(exclude_top, text="🚫 คีย์เวิร์ดที่ห้ามโพสต์ (หากพบคำเหล่านี้ในชื่องานหรือรายละเอียด บอทจะไม่ยื่นข้อเสนอเด็ดขาด):", font=("Segoe UI", 9, "bold"), bg="#FEF2F2", fg="#B91C1C")
+        lbl_exclude_title.pack(side="left")
+
+        self.lbl_exclude_kw_count = tk.Label(exclude_top, text="จำนวน: 0 คำ", font=("Segoe UI", 9, "bold"), bg="#FEF2F2", fg="#B91C1C")
+        self.lbl_exclude_kw_count.pack(side="right")
+
+        # Tag Input Widget for Exclude Keywords
+        self.exclude_tag_widget = TagInputWidget(
+            self.exclude_editor_card,
+            on_tags_changed=self.on_exclude_tags_changed,
+            bg="#FEF2F2",
+            chip_bg="#FEE2E2",
+            chip_border="#FCA5A5",
+            chip_fg="#B91C1C",
+            chip_icon="🚫",
+            del_fg="#F87171",
+            del_hover_fg="#7F1D1D",
+            placeholder_text="ยังไม่มีคีย์เวิร์ดที่ห้ามโพสต์ (พิมพ์คำที่ต้องการบล็อก เช่น การพนัน, 3D แล้วกด Enter เพื่อเพิ่มแท็ก)",
+            hint_text="🚫 หากพบคำเหล่านี้ในโพสต์งาน บอทจะข้ามและไม่ยื่นข้อเสนอโดยเด็ดขาด • คลิก ✖ บนแท็กเพื่อลบ",
+            btn_text="➕ เพิ่มคำห้าม",
+            btn_style="Secondary.TButton",
+            box_height=2
+        )
+        self.exclude_tag_widget.pack(fill="both", expand=True, pady=(2, 0))
 
     # ---------------- TAB 5: PORTFOLIO ----------------
     def build_tab_portfolio(self):
@@ -977,7 +1041,7 @@ class SettingsApp(tk.Tk):
         self.token_entry.insert(0, cfg.get("access_token", ""))
 
         self.brief_url_entry.delete(0, "end")
-        self.brief_url_entry.insert(0, cfg.get("default_brief_url", "https://fastwork.co"))
+        self.brief_url_entry.insert(0, cfg.get("default_brief_url", ""))
 
         self.interval_entry.delete(0, "end")
         self.interval_entry.insert(0, str(cfg.get("check_interval_seconds", 300)))
@@ -1004,6 +1068,11 @@ class SettingsApp(tk.Tk):
         # Products
         self.populate_products_tree(cfg.get("user_products", []))
 
+        # Exclude Keywords (คีย์เวิร์ดที่ห้ามโพสต์)
+        ex_kws = cfg.get("exclude_keywords", [])
+        self.exclude_tag_widget.set_tags(ex_kws)
+        self.lbl_exclude_kw_count.config(text=f"จำนวน: {len(ex_kws)} คำ")
+
         # Update Account info preview
         self.update_account_info_preview()
 
@@ -1018,6 +1087,10 @@ class SettingsApp(tk.Tk):
                 self.after(0, lambda: self.lbl_quota.config(text=f"โควต้าข้อเสนอที่ใช้อยู่: {info.get('quota', '-')}") )
                 self.after(0, lambda: self.lbl_token_exp.config(text=f"Token หมดอายุ: {info.get('exp', '-')}") )
         threading.Thread(target=worker, daemon=True).start()
+
+    def on_exclude_tags_changed(self, tags):
+        self.config["exclude_keywords"] = list(tags)
+        self.lbl_exclude_kw_count.config(text=f"จำนวน: {len(tags)} คำ")
 
     def on_prod_tree_selected(self, event=None):
         selected = self.prod_tree.selection()
@@ -1127,13 +1200,18 @@ class SettingsApp(tk.Tk):
         except ValueError:
             days = 1
 
-        # 3. Flush any active edits from Product tag widget
+        # 3. Flush any active edits from Product tag widget and Exclude tag widget
+        self.tag_widget.flush_entry()
+        self.exclude_tag_widget.flush_entry()
+
         selected = self.prod_tree.selection()
         if selected:
             sel_idx = self.prod_tree.index(selected[0])
             prods = self.config.get("user_products", [])
             if 0 <= sel_idx < len(prods):
                 prods[sel_idx]["keywords"] = self.tag_widget.get_tags()
+
+        exclude_kws = self.exclude_tag_widget.get_tags()
 
         # 4. Startup Shortcut
         start_boot = self.var_start_boot.get()
@@ -1142,7 +1220,7 @@ class SettingsApp(tk.Tk):
         # Construct new config
         new_config = {
             "keywords": self.config.get("keywords", []),
-            "exclude_keywords": self.config.get("exclude_keywords", []),
+            "exclude_keywords": exclude_kws,
             "check_interval_seconds": interval,
             "mode": mode,
             "desktop_notification": self.var_desktop_notify.get(),

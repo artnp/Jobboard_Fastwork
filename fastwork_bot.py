@@ -245,6 +245,23 @@ def get_all_monitoring_keywords(config):
                 all_kws.append(k)
     return all_kws
 
+def get_all_exclude_keywords(config):
+    """Combines global exclude keywords with any product-specific exclude keywords."""
+    all_ex = []
+    seen = set()
+    for kw in config.get("exclude_keywords", []):
+        k = kw.strip()
+        if k and k.lower() not in seen:
+            seen.add(k.lower())
+            all_ex.append(k)
+    for prod in config.get("user_products", []):
+        for kw in prod.get("exclude_keywords", []):
+            k = kw.strip()
+            if k and k.lower() not in seen:
+                seen.add(k.lower())
+                all_ex.append(k)
+    return all_ex
+
 def select_best_product(job, config):
     """Select the best matching user product for a job based on direct product keywords, tags, title, and text similarity."""
     user_products = config.get("user_products", [])
@@ -443,15 +460,20 @@ def submit_offer(job_id, job, config):
             message += padding
         message = message.strip()
 
-    brief_url = config.get("default_brief_url", "https://fastwork.co")
+    raw_brief_url = config.get("default_brief_url", "")
+    brief_url = raw_brief_url.strip() if isinstance(raw_brief_url, str) else ""
 
     offer_data = {
         "description": message,
         "budget": budget_val,
         "working_days": working_days,
-        "brief_url": brief_url,
         "brief_files": brief_files
     }
+    
+    if brief_url:
+        if not brief_url.startswith("http://") and not brief_url.startswith("https://"):
+            brief_url = f"https://{brief_url}"
+        offer_data["brief_url"] = brief_url
     
     if product_id:
         offer_data["product_id"] = product_id
@@ -484,7 +506,7 @@ def submit_offer(job_id, job, config):
 def check_jobs_cycle(config, notifier, seen_jobs):
     global last_status_message
     keywords = get_all_monitoring_keywords(config)
-    exclude_keywords = config.get("exclude_keywords", [])
+    exclude_keywords = get_all_exclude_keywords(config)
     mode = config.get("mode", "notify")
 
     jobs = fetch_jobs()

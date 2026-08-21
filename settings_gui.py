@@ -462,8 +462,8 @@ class SettingsApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Fastwork Bot - ระบบตั้งค่าและจัดการบอท")
-        self.geometry("860x780")
-        self.minsize(760, 660)
+        self.geometry("880x820")
+        self.minsize(780, 680)
         
         # Apply icon if available
         if os.path.exists(ICON_FILE):
@@ -674,25 +674,64 @@ class SettingsApp(tk.Tk):
     # ---------------- TAB 2: AUTO OFFER & DESCRIPTION ----------------
     def build_tab_offer(self):
         container = tk.Frame(self.tab_offer, bg=self.bg_color)
-        container.pack(fill="both", expand=True, padx=15, pady=15)
+        container.pack(fill="both", expand=True, padx=15, pady=12)
 
-        card = tk.Frame(container, bg=self.card_bg, highlightbackground=self.border_color, highlightthickness=1, padx=15, pady=15)
+        card = tk.Frame(container, bg=self.card_bg, highlightbackground=self.border_color, highlightthickness=1, padx=15, pady=12)
         card.pack(fill="both", expand=True)
 
         tk.Label(card, text="📝 ข้อความใบเสนอราคา (Offer Description)", font=("Segoe UI", 11, "bold"), bg=self.card_bg, fg=self.text_dark).pack(anchor="w")
-        tk.Label(card, text="ข้อความนี้จะถูกส่งไปยังผู้ว่าจ้างเมื่อบอทยื่นข้อเสนออัตโนมัติ (Fastwork บังคับอย่างน้อย 100 ตัวอักษร)", font=("Segoe UI", 9), bg=self.card_bg, fg=self.text_muted).pack(anchor="w", pady=(0, 8))
+        tk.Label(card, text="เลือกเขียนข้อความเฉพาะตามแต่ละงานบริการ/สินค้า เพื่อให้ตรงประเด็นและไม่ดูเหมือนสแปม (Fastwork บังคับอย่างน้อย 100 ตัวอักษร)", font=("Segoe UI", 9), bg=self.card_bg, fg=self.text_muted).pack(anchor="w", pady=(0, 8))
 
-        self.desc_text = tk.Text(card, font=("Segoe UI", 10), height=9, wrap="word", relief="solid", borderwidth=1)
-        self.desc_text.pack(fill="both", expand=True, pady=5)
+        # Target Product / Service Selection Row
+        select_box = tk.Frame(card, bg="#F1F5F9", highlightbackground=self.border_color, highlightthickness=1, padx=10, pady=8)
+        select_box.pack(fill="x", pady=(0, 8))
+
+        sel_top_row = tk.Frame(select_box, bg="#F1F5F9")
+        sel_top_row.pack(fill="x")
+
+        tk.Label(sel_top_row, text="🎯 เลือกงานบริการ / สินค้า:", font=("Segoe UI", 9, "bold"), bg="#F1F5F9", fg=self.text_dark).pack(side="left")
+
+        self.current_offer_target_idx = 0
+        self.offer_target_combo = ttk.Combobox(sel_top_row, state="readonly", font=("Segoe UI", 9), width=58)
+        self.offer_target_combo.pack(side="left", padx=(10, 0), fill="x", expand=True)
+        self.offer_target_combo.bind("<<ComboboxSelected>>", self.on_offer_target_selected)
+
+        # Status badge under combo
+        self.lbl_target_desc_status = tk.Label(select_box, text="🌐 กำลังแก้ไข: ข้อความมาตรฐานเริ่มต้น (จะถูกใช้เมื่อสินค้าไม่มีข้อความเฉพาะ)", font=("Segoe UI", 8, "bold"), bg="#F1F5F9", fg=self.primary_color)
+        self.lbl_target_desc_status.pack(anchor="w", pady=(4, 0))
+
+        # Dynamic Variable Buttons Toolbar
+        var_toolbar = tk.Frame(card, bg=self.card_bg)
+        var_toolbar.pack(fill="x", pady=(0, 4))
+
+        tk.Label(var_toolbar, text="💡 แทรกตัวแปรอัตโนมัติ:", font=("Segoe UI", 8, "bold"), bg=self.card_bg, fg=self.text_muted).pack(side="left", padx=(0, 4))
+
+        def make_insert_btn(parent, label, tag_text):
+            btn = ttk.Button(parent, text=label, style="Secondary.TButton", command=lambda: self.insert_placeholder(tag_text))
+            btn.pack(side="left", padx=2)
+            return btn
+
+        make_insert_btn(var_toolbar, "➕ {job_title} (ชื่องาน)", "{job_title}")
+
+        # Quick action buttons on right side of toolbar
+        self.btn_copy_default = ttk.Button(var_toolbar, text="📋 คัดลอกจากค่าเริ่มต้น", style="Secondary.TButton", command=self.copy_default_to_current_offer)
+        self.btn_copy_default.pack(side="right", padx=2)
+
+        self.btn_clear_custom = ttk.Button(var_toolbar, text="🗑️ ล้างเป็นค่าว่าง", style="Secondary.TButton", command=self.clear_current_custom_offer)
+        self.btn_clear_custom.pack(side="right", padx=2)
+
+        # Text Area
+        self.desc_text = tk.Text(card, font=("Segoe UI", 10), height=7, wrap="word", relief="solid", borderwidth=1)
+        self.desc_text.pack(fill="both", expand=True, pady=(2, 4))
         self.desc_text.bind("<KeyRelease>", self.update_char_count)
         add_text_context_menu(self.desc_text, on_change=self.update_char_count)
 
         self.lbl_char_count = tk.Label(card, text="จำนวนตัวอักษร: 0 ตัวอักษร", font=("Segoe UI", 9, "bold"), bg=self.card_bg, fg=self.danger_color)
-        self.lbl_char_count.pack(anchor="w", pady=(2, 10))
+        self.lbl_char_count.pack(anchor="w", pady=(2, 4))
 
         # Price and working days
         price_row = tk.Frame(card, bg=self.card_bg)
-        price_row.pack(fill="x", pady=5)
+        price_row.pack(fill="x", pady=2)
 
         tk.Label(price_row, text="💰 ราคาเริ่มต้น (บาท):", font=("Segoe UI", 9, "bold"), bg=self.card_bg).grid(row=0, column=0, sticky="w", padx=(0, 10))
         self.budget_entry = ttk.Entry(price_row, width=12, font=("Segoe UI", 10))
@@ -704,15 +743,117 @@ class SettingsApp(tk.Tk):
         self.days_entry.grid(row=0, column=3, sticky="w")
         add_text_context_menu(self.days_entry)
 
-        tk.Label(card, text="* หากผู้ว่าจ้างระบุงบประมาณในโพสต์ บอทจะใช้งบประมาณของผู้ว่าจ้างเป็นหลัก แต่หากไม่ระบุจะใช้ราคาเริ่มต้นนี้", font=("Segoe UI", 8), bg=self.card_bg, fg=self.text_muted).pack(anchor="w", pady=(8, 0))
+        # Anti-spam tips box
+        tip_box = tk.Frame(card, bg="#F0FDF4", highlightbackground="#BBF7D0", highlightthickness=1, padx=10, pady=8)
+        tip_box.pack(fill="x", pady=(6, 0))
+
+        tk.Label(tip_box, text="🛡️ เคล็ดลับการตั้งข้อความไม่ให้ดูเหมือนสแปม:", font=("Segoe UI", 9, "bold"), bg="#F0FDF4", fg="#166534").pack(anchor="w")
+        tip_text = (
+            "1. เลือกสินค้าแต่ละชิ้นในเมนูด้านบน แล้วเขียนข้อความที่เจาะจงกับบริการนั้นๆ โดยตรง\n"
+            "2. ใส่ {job_title} ในข้อความ เช่น 'สวัสดีครับ สนใจงาน {job_title} ยินดีเริ่มงานทันที...' เพื่อให้ระบบดึงชื่องานจริงของผู้ว่าจ้างมาใส่\n"
+            "3. ใช้ระบบสุ่มคำ {สวัสดีครับ|ยินดีให้บริการครับ|พร้อมรับงานครับ} บอทจะสุ่มข้อความให้ไม่ซ้ำกันในแต่ละครั้งที่ยื่นงาน"
+        )
+        tk.Label(tip_box, text=tip_text, font=("Segoe UI", 8), bg="#F0FDF4", fg="#15803D", justify="left").pack(anchor="w", pady=(2, 0))
+
+    def insert_placeholder(self, tag_text):
+        try:
+            self.desc_text.insert("insert", tag_text)
+            self.desc_text.focus_set()
+            self.update_char_count()
+        except Exception:
+            pass
+
+    def copy_default_to_current_offer(self):
+        default_desc = self.config.get("auto_offer_config", {}).get("description", "")
+        self.desc_text.delete("1.0", "end")
+        self.desc_text.insert("1.0", default_desc)
+        self.update_char_count()
+
+    def clear_current_custom_offer(self):
+        if self.current_offer_target_idx > 0:
+            self.desc_text.delete("1.0", "end")
+            self.update_char_count()
+        else:
+            messagebox.showinfo("แจ้งเตือน", "ข้อความเริ่มต้นส่วนกลางไม่สามารถลบจนว่างเปล่าได้")
+
+    def populate_offer_target_combobox(self):
+        prods = self.config.get("user_products", [])
+        values = ["🌐 [ค่าเริ่มต้น] ข้อความมาตรฐานทั่วไป (Default Template)"]
+        for idx, p in enumerate(prods, 1):
+            title = p.get("title", "ไม่ระบุ")
+            short_title = (title[:48] + "...") if len(title) > 48 else title
+            has_desc = bool(p.get("description", "").strip())
+            badge = "✅" if has_desc else "⚪"
+            values.append(f"{badge} #{idx} {short_title}")
+        
+        self.offer_target_combo["values"] = values
+        if self.current_offer_target_idx >= len(values):
+            self.current_offer_target_idx = 0
+        self.offer_target_combo.current(self.current_offer_target_idx)
+        self.update_offer_target_ui(self.current_offer_target_idx, save_previous=False)
+
+    def on_offer_target_selected(self, event=None):
+        new_idx = self.offer_target_combo.current()
+        if new_idx < 0:
+            return
+        self.update_offer_target_ui(new_idx, save_previous=True)
+
+    def update_offer_target_ui(self, target_idx, save_previous=True):
+        prods = self.config.get("user_products", [])
+        
+        # 1. Save previous text to memory
+        if save_previous:
+            prev_text = self.desc_text.get("1.0", "end-1c").strip()
+            if self.current_offer_target_idx == 0:
+                if "auto_offer_config" not in self.config:
+                    self.config["auto_offer_config"] = {}
+                self.config["auto_offer_config"]["description"] = prev_text
+            else:
+                p_idx = self.current_offer_target_idx - 1
+                if 0 <= p_idx < len(prods):
+                    prods[p_idx]["description"] = prev_text
+
+        # 2. Update current index
+        self.current_offer_target_idx = target_idx
+
+        # 3. Load text for the new target
+        self.desc_text.delete("1.0", "end")
+        if target_idx == 0:
+            desc = self.config.get("auto_offer_config", {}).get("description", "")
+            self.desc_text.insert("1.0", desc)
+            self.lbl_target_desc_status.config(text="🌐 กำลังแก้ไข: ข้อความมาตรฐานเริ่มต้น (จะถูกใช้เมื่อสินค้าไม่มีข้อความเฉพาะ)", fg=self.primary_color)
+            self.btn_copy_default.config(state="disabled")
+            self.btn_clear_custom.config(state="disabled")
+        else:
+            p_idx = target_idx - 1
+            if 0 <= p_idx < len(prods):
+                p = prods[p_idx]
+                desc = p.get("description", "")
+                self.desc_text.insert("1.0", desc)
+                if desc.strip():
+                    self.lbl_target_desc_status.config(text=f"✅ มีข้อความเฉพาะสำหรับงานนี้: จะถูกส่งเมื่อเจองานที่ตรงกับ #{target_idx}", fg=self.success_color)
+                else:
+                    self.lbl_target_desc_status.config(text=f"⚪ งานนี้ยังไม่มีข้อความเฉพาะ (จะใช้ข้อความมาตรฐานเริ่มต้นอัตโนมัติ)", fg=self.text_muted)
+                self.btn_copy_default.config(state="normal")
+                self.btn_clear_custom.config(state="normal")
+
+        self.update_char_count()
 
     def update_char_count(self, event=None):
         text = self.desc_text.get("1.0", "end-1c")
         count = len(text)
-        if count >= 100:
-            self.lbl_char_count.config(text=f"✅ จำนวนตัวอักษร: {count} ตัวอักษร (ผ่านเกณฑ์)", fg=self.success_color)
+        if self.current_offer_target_idx == 0:
+            if count >= 100:
+                self.lbl_char_count.config(text=f"✅ จำนวนตัวอักษร: {count} ตัวอักษร (ผ่านเกณฑ์)", fg=self.success_color)
+            else:
+                self.lbl_char_count.config(text=f"⚠️ จำนวนตัวอักษร: {count}/100 ตัวอักษร (ต้องมีอย่างน้อย 100 ตัวอักษร)", fg=self.danger_color)
         else:
-            self.lbl_char_count.config(text=f"⚠️ จำนวนตัวอักษร: {count}/100 ตัวอักษร (ต้องมีอย่างน้อย 100 ตัวอักษร)", fg=self.danger_color)
+            if count == 0:
+                self.lbl_char_count.config(text="⚪ เว้นว่างไว้: บอทจะใช้ข้อความมาตรฐานเริ่มต้นให้อัตโนมัติ", fg=self.text_muted)
+            elif count >= 100:
+                self.lbl_char_count.config(text=f"✅ จำนวนตัวอักษร: {count} ตัวอักษร (ผ่านเกณฑ์)", fg=self.success_color)
+            else:
+                self.lbl_char_count.config(text=f"⚠️ จำนวนตัวอักษร: {count}/100 ตัวอักษร (ข้อความเฉพาะควรมีอย่างน้อย 100 ตัวอักษร หรือเว้นว่างไว้เพื่อใช้ค่าเริ่มต้น)", fg=self.danger_color)
 
     # ---------------- TAB 3: PRODUCTS ----------------
     def build_tab_products(self):
@@ -736,17 +877,19 @@ class SettingsApp(tk.Tk):
         tree_frame = tk.Frame(card)
         tree_frame.pack(fill="x", pady=(0, 4))
 
-        cols = ("num", "title", "kw_count", "id")
+        cols = ("num", "title", "kw_count", "offer_desc", "id")
         self.prod_tree = ttk.Treeview(tree_frame, columns=cols, show="headings", selectmode="browse", height=4)
         self.prod_tree.heading("num", text="#")
         self.prod_tree.heading("title", text="ชื่องานบริการ (Product Title)")
         self.prod_tree.heading("kw_count", text="คีย์เวิร์ดเฉพาะ")
+        self.prod_tree.heading("offer_desc", text="ข้อความเฉพาะ")
         self.prod_tree.heading("id", text="Product ID")
 
         self.prod_tree.column("num", width=35, anchor="center")
-        self.prod_tree.column("title", width=440, anchor="w")
-        self.prod_tree.column("kw_count", width=120, anchor="center")
-        self.prod_tree.column("id", width=170, anchor="center")
+        self.prod_tree.column("title", width=380, anchor="w")
+        self.prod_tree.column("kw_count", width=110, anchor="center")
+        self.prod_tree.column("offer_desc", width=120, anchor="center")
+        self.prod_tree.column("id", width=150, anchor="center")
 
         scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=self.prod_tree.yview)
         self.prod_tree.configure(yscrollcommand=scroll.set)
@@ -764,6 +907,9 @@ class SettingsApp(tk.Tk):
 
         self.lbl_selected_prod_title = tk.Label(editor_top, text="🎯 คีย์เวิร์ดเฉพาะสำหรับ: (กรุณาคลิกเลือกสินค้าในตารางด้านบน)", font=("Segoe UI", 9, "bold"), bg="#F1F5F9", fg=self.primary_color)
         self.lbl_selected_prod_title.pack(side="left")
+
+        btn_jump_offer = ttk.Button(editor_top, text="✍️ แก้ไขข้อความเสนองานนี้", style="Secondary.TButton", command=self.edit_selected_prod_offer)
+        btn_jump_offer.pack(side="right", padx=(8, 0))
 
         self.lbl_kw_count = tk.Label(editor_top, text="จำนวน: 0 คำ", font=("Segoe UI", 9, "bold"), bg="#F1F5F9", fg=self.text_dark)
         self.lbl_kw_count.pack(side="right")
@@ -818,6 +964,19 @@ class SettingsApp(tk.Tk):
             box_height=2
         )
         self.exclude_tag_widget.pack(fill="both", expand=True, pady=(2, 0))
+
+    def edit_selected_prod_offer(self):
+        selected = self.prod_tree.selection()
+        if not selected:
+            messagebox.showinfo("แจ้งเตือน", "กรุณาคลิกเลือกสินค้าในตารางก่อน")
+            return
+        idx = self.prod_tree.index(selected[0])
+        self.tag_widget.flush_entry()
+        self.notebook.select(self.tab_offer)
+        target_idx = idx + 1
+        if target_idx < len(self.offer_target_combo["values"]):
+            self.offer_target_combo.current(target_idx)
+            self.update_offer_target_ui(target_idx, save_previous=True)
 
     # ---------------- TAB 5: PORTFOLIO ----------------
     def build_tab_portfolio(self):
@@ -1055,9 +1214,7 @@ class SettingsApp(tk.Tk):
 
         # Offer
         offer_cfg = cfg.get("auto_offer_config", {})
-        self.desc_text.delete("1.0", "end")
-        self.desc_text.insert("1.0", offer_cfg.get("description", ""))
-        self.update_char_count()
+        self.populate_offer_target_combobox()
 
         self.budget_entry.delete(0, "end")
         self.budget_entry.insert(0, str(offer_cfg.get("budget", 100)))
@@ -1126,14 +1283,18 @@ class SettingsApp(tk.Tk):
                 p = prods[idx]
                 kw_cnt = len(p.get("keywords", []))
                 kw_str = f"✅ {kw_cnt} คำ" if kw_cnt > 0 else "0 คำ (ยังไม่ตั้ง)"
-                self.prod_tree.item(item_id, values=(idx + 1, p.get("title", ""), kw_str, p.get("product_id", "")))
+                has_desc = bool(p.get("description", "").strip())
+                desc_str = f"✅ มีแล้ว ({len(p['description'].strip())} ตัว)" if has_desc else "⚪ ค่าเริ่มต้น"
+                self.prod_tree.item(item_id, values=(idx + 1, p.get("title", ""), kw_str, desc_str, p.get("product_id", "")))
 
     def populate_products_tree(self, products):
         self.prod_tree.delete(*self.prod_tree.get_children())
         for idx, p in enumerate(products, 1):
             kw_cnt = len(p.get("keywords", []))
             kw_str = f"✅ {kw_cnt} คำ" if kw_cnt > 0 else "0 คำ (ยังไม่ตั้ง)"
-            self.prod_tree.insert("", "end", values=(idx, p.get("title", ""), kw_str, p.get("product_id", "")))
+            has_desc = bool(p.get("description", "").strip())
+            desc_str = f"✅ มีแล้ว ({len(p['description'].strip())} ตัว)" if has_desc else "⚪ ค่าเริ่มต้น"
+            self.prod_tree.insert("", "end", values=(idx, p.get("title", ""), kw_str, desc_str, p.get("product_id", "")))
 
         first_items = self.prod_tree.get_children()
         if first_items:
@@ -1153,18 +1314,23 @@ class SettingsApp(tk.Tk):
 
             def update_ui():
                 if ok:
-                    # Preserve existing keywords per product by product_id
-                    old_prod_kw_map = {p.get("product_id"): p.get("keywords", []) for p in self.config.get("user_products", [])}
+                    # Preserve existing keywords and descriptions per product by product_id
+                    old_prod_map = {p.get("product_id"): p for p in self.config.get("user_products", [])}
                     for p in prods:
                         p_id = p.get("product_id")
-                        if p_id in old_prod_kw_map:
-                            p["keywords"] = old_prod_kw_map[p_id]
-                        elif "keywords" not in p:
-                            p["keywords"] = []
+                        if p_id in old_prod_map:
+                            p["keywords"] = old_prod_map[p_id].get("keywords", [])
+                            p["description"] = old_prod_map[p_id].get("description", "")
+                        else:
+                            if "keywords" not in p:
+                                p["keywords"] = []
+                            if "description" not in p:
+                                p["description"] = ""
 
                     self.config["user_products"] = prods
                     self.config["access_token"] = token
                     self.populate_products_tree(prods)
+                    self.populate_offer_target_combobox()
                     if info:
                         self.lbl_user_id.config(text=f"User ID: {info.get('user_id', '-')}")
                         self.lbl_quota.config(text=f"โควต้าข้อเสนอที่ใช้อยู่: {info.get('quota', '-')}")
@@ -1189,8 +1355,19 @@ class SettingsApp(tk.Tk):
             interval = 300
         mode = self.mode_reverse_map.get(self.mode_combo.get(), "auto_offer")
 
-        # 2. Offer
-        desc = self.desc_text.get("1.0", "end-1c").strip()
+        # 2. Offer - Flush current text into memory
+        curr_offer_text = self.desc_text.get("1.0", "end-1c").strip()
+        prods = self.config.get("user_products", [])
+        if self.current_offer_target_idx == 0:
+            if "auto_offer_config" not in self.config:
+                self.config["auto_offer_config"] = {}
+            self.config["auto_offer_config"]["description"] = curr_offer_text
+        else:
+            p_idx = self.current_offer_target_idx - 1
+            if 0 <= p_idx < len(prods):
+                prods[p_idx]["description"] = curr_offer_text
+
+        default_desc = self.config.get("auto_offer_config", {}).get("description", "")
         try:
             budget = int(self.budget_entry.get().strip())
         except ValueError:
@@ -1207,7 +1384,6 @@ class SettingsApp(tk.Tk):
         selected = self.prod_tree.selection()
         if selected:
             sel_idx = self.prod_tree.index(selected[0])
-            prods = self.config.get("user_products", [])
             if 0 <= sel_idx < len(prods):
                 prods[sel_idx]["keywords"] = self.tag_widget.get_tags()
 
@@ -1231,14 +1407,15 @@ class SettingsApp(tk.Tk):
             "auto_offer_config": {
                 "budget": budget,
                 "working_days": days,
-                "description": desc
+                "description": default_desc
             },
-            "user_products": self.config.get("user_products", [])
+            "user_products": prods
         }
 
         if save_config_data(new_config):
             self.config = new_config
             self.refresh_products_tree_display()
+            self.populate_offer_target_combobox()
             self.status_label.config(text=f"✅ บันทึกการตั้งค่าเรียบร้อยแล้ว ({datetime.now().strftime('%H:%M:%S')})")
             messagebox.showinfo("บันทึกสำเร็จ", "บันทึกการตั้งค่าทั้งหมดเรียบร้อยแล้ว!\nบอทจะโหลดค่าใหม่ไปใช้งานอัตโนมัติ")
 

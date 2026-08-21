@@ -6,6 +6,7 @@ import logging
 import threading
 import subprocess
 import re
+import random
 import requests
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
@@ -141,13 +142,18 @@ def auto_sync_user_products_if_needed(config):
         r = requests.get("https://api.fastwork.co/api/v4/user/products", headers=headers, timeout=10)
         if r.status_code == 200:
             raw_products = r.json()
+            old_prods_map = {p.get("product_id"): p for p in config.get("user_products", [])}
             products = []
             for p in raw_products:
+                pid = p.get("id")
+                old_p = old_prods_map.get(pid, {})
                 products.append({
-                    "product_id": p.get("id"),
+                    "product_id": pid,
                     "title": p.get("title", ""),
                     "slug": p.get("slug", ""),
-                    "tags": p.get("tags", [])
+                    "tags": p.get("tags", []),
+                    "keywords": old_p.get("keywords", []),
+                    "description": old_p.get("description", "")
                 })
             config["user_products"] = products
             save_config(config)
@@ -418,6 +424,80 @@ def upload_portfolio_files(token: str, job_id: str):
 
     return brief_files
 
+def format_offer_description(template: str, job: dict, best_product: dict = None, budget_val: int = 100, working_days: int = 1) -> str:
+    """
+    Formats the offer proposal description by:
+    1. Processing Spintax like {สวัสดีครับ|ยินดีให้บริการครับ|สวัสดีครับคุณลูกค้า}
+    2. Replacing dynamic variables:
+       - {job_title} or {title} -> real job title from client
+       - {job_desc} or {job_description} -> snippet of client's job description
+       - {budget} or {job_budget} -> budget value
+       - {product_title} or {service} -> matching product/service title
+       - {working_days} or {days} -> delivery days
+    3. Ensuring Fastwork's >= 100 characters requirement.
+    """
+    if not template or not template.strip():
+        template = "สวัสดีครับ ยินดีให้บริการครับ พร้อมรับงานและส่งมอบได้ตามต้องการอย่างรวดเร็วและมีคุณภาพครับ"
+
+    text = template
+
+    # 1. Process Spintax: e.g. {สวัสดีครับ|ยินดีให้บริการครับ} (only when contains '|')
+    def spintax_replacer(match):
+        content = match.group(1)
+        if "|" in content:
+            options = content.split("|")
+            return random.choice(options).strip()
+        # Not a spintax choice, keep as is for variable replacement
+        return match.group(0)
+
+    max_loops = 5
+    while "{" in text and "|" in text and max_loops > 0:
+        new_text = re.sub(r'\{([^{}]+?)\}', spintax_replacer, text)
+        if new_text == text:
+            break
+        text = new_text
+        max_loops -= 1
+
+    # 2. Dynamic variable replacements
+    job_title = (job.get("title") or "").strip()
+    raw_desc = (job.get("description") or "").strip()
+    job_desc_snippet = (raw_desc[:120] + "...") if len(raw_desc) > 120 else raw_desc
+    product_title = (best_product.get("title") or "").strip() if best_product else ""
+
+    replacements = {
+        "{job_title}": job_title,
+        "{title}": job_title,
+        "{job_desc}": job_desc_snippet,
+        "{job_description}": job_desc_snippet,
+        "{budget}": f"{budget_val:,}" if isinstance(budget_val, int) else str(budget_val),
+        "{job_budget}": f"{budget_val:,}" if isinstance(budget_val, int) else str(budget_val),
+        "{product_title}": product_title,
+        "{service}": product_title,
+        "{working_days}": str(working_days),
+        "{days}": str(working_days),
+    }
+
+    for placeholder, val in replacements.items():
+        if placeholder in text:
+            text = text.replace(placeholder, val)
+
+    text = text.strip()
+
+    # 3. Fastwork requires description minimum 100 characters
+    if len(text) < 100:
+        padding_phrases = [
+            " ยินดีเริ่มงานทันทีและส่งมอบผลงานคุณภาพสูงตามที่กำหนดครับ",
+            " สามารถพูดคุยสอบถามและปรับแก้รายละเอียดงานได้ตลอดเวลาครับ",
+            " ขอบคุณที่ให้ความสนใจและยินดีร่วมงานด้วยความเต็มใจครับ"
+        ]
+        p_idx = 0
+        while len(text) < 100:
+            text += padding_phrases[p_idx % len(padding_phrases)]
+            p_idx += 1
+        text = text.strip()
+
+    return text
+
 def submit_offer(job_id, job, config):
     token = config.get("access_token", "").strip()
     if not token:
@@ -452,13 +532,16 @@ def submit_offer(job_id, job, config):
     except (ValueError, TypeError):
         working_days = 1
 
-    message = offer_cfg.get("description", offer_cfg.get("message", "สวัสดีครับ ยินดีให้บริการครับ พร้อมรับงานและส่งมอบได้ตามต้องการอย่างรวดเร็วและมีคุณภาพครับ"))
-    # Fastwork requires description minimum 100 characters
-    if len(message) < 100:
-        padding = " สวัสดีครับ ยินดีให้บริการและพร้อมเริ่มงานทันทีครับ สามารถสอบถามรายละเอียดและแก้ไขงานได้ตลอดเวลาครับ"
-        while len(message) < 100:
-            message += padding
-        message = message.strip()
+    # Check if best_product has a custom offer description
+    custom_desc = (best_product.get("description") or "").strip() if best_product else ""
+    if custom_desc:
+        template = custom_desc
+        logger.info(f"📝 ใช้ข้อความเฉพาะสำหรับสินค้า: \"{best_product.get('title', '')[:40]}...\"")
+    else:
+        template = offer_cfg.get("description", offer_cfg.get("message", "สวัสดีครับ ยินดีให้บริการครับ พร้อมรับงานและส่งมอบได้ตามต้องการอย่างรวดเร็วและมีคุณภาพครับ"))
+        logger.info("📝 ใช้ข้อความมาตรฐานเริ่มต้น (Default Description)")
+
+    message = format_offer_description(template, job, best_product, budget_val, working_days)
 
     raw_brief_url = config.get("default_brief_url", "")
     brief_url = raw_brief_url.strip() if isinstance(raw_brief_url, str) else ""
@@ -495,6 +578,8 @@ def submit_offer(job_id, job, config):
         prod_name = best_product.get("title") if best_product else "ไม่ได้ระบุ"
         if res.status_code in [200, 201]:
             logger.info(f"✅ ยื่นข้อเสนอสำเร็จ! Job ID: {job_id} | สินค้า: {prod_name} | งบ: ฿{budget_val} | แนบผลงาน: {len(brief_files)} ไฟล์")
+            desc_preview = (message[:70] + "...") if len(message) > 70 else message
+            logger.info(f"💬 ข้อความที่ส่ง: {desc_preview}")
             return True
         else:
             logger.error(f"❌ Failed to post offer for job {job_id}. Status: {res.status_code}, Response: {res.text}")

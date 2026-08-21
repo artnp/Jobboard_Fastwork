@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
-  "release_date": "2026-08-16",
-  "changelog": "เวอร์ชัน 1.0.0: ระบบบอท Fastwork Auto-Offer พร้อมหน้าต่างตั้งค่า GUI, ระบบดึง Token และสินค้าอัตโนมัติ, ระบบอัปโหลดผลงานตัวอย่าง PDF/รูปภาพ",
+  "version": "1.1.0",
+  "release_date": "2026-08-21",
+  "changelog": "เวอร์ชัน 1.1.0: เพิ่มระบบตั้งค่าข้อความใบเสนอราคาแยกตามแต่ละงานบริการ/สินค้า (Per-Product Offer Description), ระบบตัวแปรอัจฉริยะ {job_title}, {budget}, {product_title} และระบบสุ่มคำ Spintax เพื่อป้องกันการดูเหมือนสแปม",
   "update_files": [
     "fastwork_bot.py",
     "settings_gui.py",

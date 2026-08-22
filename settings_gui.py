@@ -712,6 +712,7 @@ class SettingsApp(tk.Tk):
             return btn
 
         make_insert_btn(var_toolbar, "➕ {job_title} (ชื่องาน)", "{job_title}")
+        make_insert_btn(var_toolbar, "➕ #{hashtags} (คีย์เวิร์ด)", "{hashtags}")
 
         # Quick action buttons on right side of toolbar
         self.btn_copy_default = ttk.Button(var_toolbar, text="📋 คัดลอกจากค่าเริ่มต้น", style="Secondary.TButton", command=self.copy_default_to_current_offer)
@@ -750,8 +751,9 @@ class SettingsApp(tk.Tk):
         tk.Label(tip_box, text="🛡️ เคล็ดลับการตั้งข้อความไม่ให้ดูเหมือนสแปม:", font=("Segoe UI", 9, "bold"), bg="#F0FDF4", fg="#166534").pack(anchor="w")
         tip_text = (
             "1. เลือกสินค้าแต่ละชิ้นในเมนูด้านบน แล้วเขียนข้อความที่เจาะจงกับบริการนั้นๆ โดยตรง\n"
-            "2. ใส่ {job_title} ในข้อความ เช่น 'สวัสดีครับ สนใจงาน {job_title} ยินดีเริ่มงานทันที...' เพื่อให้ระบบดึงชื่องานจริงของผู้ว่าจ้างมาใส่\n"
-            "3. ใช้ระบบสุ่มคำ {สวัสดีครับ|ยินดีให้บริการครับ|พร้อมรับงานครับ} บอทจะสุ่มข้อความให้ไม่ซ้ำกันในแต่ละครั้งที่ยื่นงาน"
+            "2. ใส่ {job_title} เพื่อดึงชื่องานจริงของผู้ว่าจ้าง เช่น 'สวัสดีครับ สนใจงาน {job_title} ...'\n"
+            "3. ใส่ {hashtags} เพื่อดึงคีย์เวิร์ดที่ดักเจอมาแสดงในรูปแบบแฮชแท็ก เช่น #ตัดต่อเลข #แก้ตัวเลข\n"
+            "4. ใช้ระบบสุ่มคำ {สวัสดีครับ|ยินดีให้บริการครับ|พร้อมรับงานครับ} บอทจะสุ่มข้อความให้ไม่ซ้ำกันในแต่ละครั้งที่ยื่นงาน"
         )
         tk.Label(tip_box, text=tip_text, font=("Segoe UI", 8), bg="#F0FDF4", fg="#15803D", justify="left").pack(anchor="w", pady=(2, 0))
 

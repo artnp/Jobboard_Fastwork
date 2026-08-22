@@ -424,12 +424,14 @@ def upload_portfolio_files(token: str, job_id: str):
 
     return brief_files
 
-def format_offer_description(template: str, job: dict, best_product: dict = None, budget_val: int = 100, working_days: int = 1) -> str:
+def format_offer_description(template: str, job: dict, best_product: dict = None, budget_val: int = 100, working_days: int = 1, matched_kws: list = None) -> str:
     """
     Formats the offer proposal description by:
     1. Processing Spintax like {สวัสดีครับ|ยินดีให้บริการครับ|สวัสดีครับคุณลูกค้า}
     2. Replacing dynamic variables:
        - {job_title} or {title} -> real job title from client
+       - {hashtags} or {keywords} or {matched_keywords} -> hashtags of matched keywords (e.g. #ตัดต่อเลข #แก้ตัวเลข)
+       - {keyword} -> single primary matched keyword hashtag
        - {job_desc} or {job_description} -> snippet of client's job description
        - {budget} or {job_budget} -> budget value
        - {product_title} or {service} -> matching product/service title
@@ -464,7 +466,42 @@ def format_offer_description(template: str, job: dict, best_product: dict = None
     job_desc_snippet = (raw_desc[:120] + "...") if len(raw_desc) > 120 else raw_desc
     product_title = (best_product.get("title") or "").strip() if best_product else ""
 
+    # Format hashtags from matched keywords
+    raw_tags = []
+    if matched_kws:
+        raw_tags = [k.strip() for k in matched_kws if k.strip()]
+    elif best_product and best_product.get("keywords"):
+        raw_tags = [k.strip() for k in best_product.get("keywords", [])[:3] if k.strip()]
+    elif (job.get("tag") or {}).get("name"):
+        raw_tags = [(job.get("tag") or {}).get("name", "").strip()]
+
+    formatted_hashtags = []
+    for t in raw_tags:
+        clean_t = t.replace(" ", "")
+        if not clean_t.startswith("#"):
+            clean_t = f"#{clean_t}"
+        if clean_t not in formatted_hashtags:
+            formatted_hashtags.append(clean_t)
+
+    hashtags_str = " ".join(formatted_hashtags) if formatted_hashtags else "#Fastwork"
+    first_hashtag = formatted_hashtags[0] if formatted_hashtags else "#Fastwork"
+
+    # Avoid duplicate ## if user wrote #{hashtags}
+    if "#{hashtags}" in text:
+        text = text.replace("#{hashtags}", hashtags_str)
+    if "#{matched_keywords}" in text:
+        text = text.replace("#{matched_keywords}", hashtags_str)
+    if "#{keywords}" in text:
+        text = text.replace("#{keywords}", hashtags_str)
+
     replacements = {
+        "{hashtags}": hashtags_str,
+        "{tags}": hashtags_str,
+        "{keywords}": hashtags_str,
+        "{matched_keywords}": hashtags_str,
+        "{matched_kws}": hashtags_str,
+        "{keyword}": first_hashtag,
+        "{matched_keyword}": first_hashtag,
         "{job_title}": job_title,
         "{title}": job_title,
         "{job_desc}": job_desc_snippet,
@@ -498,7 +535,7 @@ def format_offer_description(template: str, job: dict, best_product: dict = None
 
     return text
 
-def submit_offer(job_id, job, config):
+def submit_offer(job_id, job, config, matched_kws: list = None):
     token = config.get("access_token", "").strip()
     if not token:
         logger.warning(f"Cannot submit offer for job {job_id}: Missing access_token in config.json")
@@ -541,7 +578,7 @@ def submit_offer(job_id, job, config):
         template = offer_cfg.get("description", offer_cfg.get("message", "สวัสดีครับ ยินดีให้บริการครับ พร้อมรับงานและส่งมอบได้ตามต้องการอย่างรวดเร็วและมีคุณภาพครับ"))
         logger.info("📝 ใช้ข้อความมาตรฐานเริ่มต้น (Default Description)")
 
-    message = format_offer_description(template, job, best_product, budget_val, working_days)
+    message = format_offer_description(template, job, best_product, budget_val, working_days, matched_kws=matched_kws)
 
     raw_brief_url = config.get("default_brief_url", "")
     brief_url = raw_brief_url.strip() if isinstance(raw_brief_url, str) else ""
@@ -549,9 +586,11 @@ def submit_offer(job_id, job, config):
     offer_data = {
         "description": message,
         "budget": budget_val,
-        "working_days": working_days,
-        "brief_files": brief_files
+        "working_days": working_days
     }
+    
+    if brief_files:
+        offer_data["brief_files"] = brief_files
     
     if brief_url:
         if not brief_url.startswith("http://") and not brief_url.startswith("https://"):
@@ -632,7 +671,7 @@ def check_jobs_cycle(config, notifier, seen_jobs):
             # 1. Auto offer mode (Submit API offer FIRST for maximum speed)
             posted = False
             if mode == "auto_offer":
-                posted = submit_offer(job_id, job, config)
+                posted = submit_offer(job_id, job, config, matched_kws=matched_kws)
 
             # 2. Desktop Notification
             notify_title = f"🎯 เจองาน Fastwork ใหม่! [฿{budget}]"
